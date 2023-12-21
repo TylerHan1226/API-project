@@ -23,12 +23,10 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       firstName: {
-        type: DataTypes.String,
-        allowNull: false
+        type: DataTypes.STRING
       },
       lastName: {
-        type: DataTypes.String,
-        allowNull: false
+        type: DataTypes.STRING
       },
       email: {
         type: DataTypes.STRING,
