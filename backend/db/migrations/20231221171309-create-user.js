@@ -1,6 +1,6 @@
 'use strict';
 
-let options = {};
+let options = { tableName: 'Users'};
 if (process.env.NODE_ENV === 'production') {
   options.schema = process.env.SCHEMA;  // define your schema in options object
 }
@@ -15,11 +15,11 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       firstName: {
-        type: Sequelize.String,
+        type: Sequelize.STRING,
         allowNull: false
       },
       lastName: {
-        type: Sequelize.String,
+        type: Sequelize.STRING,
         allowNull: false
       },
       username: {

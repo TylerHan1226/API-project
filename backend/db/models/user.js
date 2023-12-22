@@ -5,6 +5,9 @@ module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
       // define association here
+      User.belongsTo(models.Group, {
+        foreignKey: 'organizerId'
+      })
     }
   };
 
@@ -23,11 +26,11 @@ module.exports = (sequelize, DataTypes) => {
         }
       },
       firstName: {
-        type: DataTypes.String,
+        type: DataTypes.STRING,
         allowNull: false
       },
       lastName: {
-        type: DataTypes.String,
+        type: DataTypes.STRING,
         allowNull: false
       },
       email: {
