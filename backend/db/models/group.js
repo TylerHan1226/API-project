@@ -2,6 +2,9 @@
 const {
   Model
 } = require('sequelize');
+
+const { Membership } = require('../models')
+
 module.exports = (sequelize, DataTypes) => {
   class Group extends Model {
     /**
@@ -11,8 +14,22 @@ module.exports = (sequelize, DataTypes) => {
      */
     static associate(models) {
       // define association here
-      Group.hasMany(models.User, {
-        foreignKey: 'organizerId'
+      Group.belongsToMany(models.User, {
+        through: 'Membership',
+        foreignKey: 'groupId',
+        otherKey: 'userId'
+      })
+
+      Group.hasMany(models.GroupImage, {
+        foreignKey: 'groupId'
+      })
+
+      Group.belongsTo(models.Venue, {
+        foreignKey: 'groupId'
+      })
+
+      Group.belongsTo(models.Event, {
+        foreignKey: 'groupId'
       })
     }
   }
