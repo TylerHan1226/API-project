@@ -13,25 +13,46 @@ module.exports = {
   async up (queryInterface, Sequelize) {
     await User.bulkCreate([
       {
-        email: 'demo@user.io',
-        username: 'Demo-lition',
+        email: 'user1@user.io',
+        username: 'User1',
         firstName: 'Tyler',
         lastName: 'Han',
         hashedPassword: bcrypt.hashSync('password')
       },
       {
-        email: 'user1@user.io',
-        username: 'FakeUser1',
+        email: 'user2@user.io',
+        username: 'User2',
         firstName: 'Gary',
         lastName: 'Cheung',
         hashedPassword: bcrypt.hashSync('password2')
       },
       {
-        email: 'user2@user.io',
-        username: 'FakeUser2',
+        email: 'user3@user.io',
+        username: 'User3',
+        firstName: 'Kevin',
+        lastName: 'Fan',
+        hashedPassword: bcrypt.hashSync('password3')
+      },
+      {
+        email: 'user4@user.io',
+        username: 'User4',
         firstName: 'Dennis',
         lastName: 'Ma',
-        hashedPassword: bcrypt.hashSync('password3')
+        hashedPassword: bcrypt.hashSync('password4')
+      },
+      {
+        email: 'user5@user.io',
+        username: 'User5',
+        firstName: 'Tony',
+        lastName: 'Han',
+        hashedPassword: bcrypt.hashSync('password5')
+      },
+      {
+        email: 'user6@user.io',
+        username: 'User6',
+        firstName: 'Chris',
+        lastName: 'Lin',
+        hashedPassword: bcrypt.hashSync('password6')
       }
     ], { validate: true });
   },

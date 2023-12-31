@@ -1,42 +1,31 @@
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
-
-let options = { tableName: 'Groups'};
+let options = { tableName: 'Attendances'};
 if (process.env.NODE_ENV === 'production') {
   options.schema = process.env.SCHEMA;  // define your schema in options object
 }
-
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Groups', {
+    await queryInterface.createTable('Attendances', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      organizerId: {
+      eventId: {
         type: Sequelize.INTEGER,
-        references: {
+        reference: {
+          model: 'Events'
+        }
+      },
+      userId: {
+        type: Sequelize.INTEGER,
+        reference: {
           model: 'Users'
         }
       },
-      name: {
-        type: Sequelize.STRING
-      },
-      about: {
-        type: Sequelize.STRING
-      },
-      type: {
-        type: Sequelize.STRING
-      },
-      private: {
-        type: Sequelize.BOOLEAN
-      },
-      city: {
-        type: Sequelize.STRING
-      },
-      state: {
+      status: {
         type: Sequelize.STRING
       },
       createdAt: {
@@ -52,7 +41,7 @@ module.exports = {
     }, options);
   },
   async down(queryInterface, Sequelize) {
-    options.tableName = "Groups";
+    options.tableName = "Attendances";
     await queryInterface.dropTable(options);
   }
 };
