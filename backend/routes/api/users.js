@@ -14,27 +14,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// router.post('/', async (req, res) => {
-//   const { email, password, username } = req.body;
-//   const hashedPassword = bcrypt.hashSync(password);
-//   const user = await User.create({ email, username, hashedPassword });
-
-//   const safeUser = {
-//     id: user.id,
-//     email: user.email,
-//     username: user.username,
-//     // lastName: user.lastName,
-//     // firstName: user.firstName
-//   };
-
-//   await setTokenCookie(res, safeUser);
-
-//   return res.json({
-//     user: safeUser
-//   });
-// }
-// );
-
 // backend/routes/api/users.js
 // ...
 const validateSignup = [
@@ -78,21 +57,44 @@ router.post('/', validateSignup, async (req, res) => {
 );
 
 
-// router.get('/:id', async (req, res) => {
-//   // console.log('Fetching user details');
-//   const {id} = req.params;
-//   const user = await User.findByPk(id, {})
-
-//   res.json(user)
-// })
-
+//Get the Current User
 router.get('/:id', async (req, res) => {
-  console.log('Fetching user details');
   const { id } = req.params;
-  const user = await User.findByPk(id, {});
-  // console.log(user); // Add this line to log user details
-  res.json({'user': user});
+  const user = await User.findByPk(id);
+  res.status(200)
+  return res.json({ 'user': user });
 });
+
+
+
+// Log In a User
+// router.post('/logIn', async (req, res) => {
+//   const { credential, password } = req.query;
+//   // const hashedPassword = bcrypt.hashSync(password);
+//   console.log(credential)
+//   console.log(password)
+//   // console.log(hashedPassword)
+  
+//   const userByEmail = await User.findAll({
+//     where: {email: credential}
+//   })
+//   // const userId1 = userByEmail.dataValues.id;
+//   console.log(userByEmail)
+//   // console.log(userId1)
+//   console.log(bcrypt.hashSync('password'))
+//   const userByPassword = await User.findAll({
+//     where: {hashedPassword: bcrypt.hashSync(password)}
+//   })
+//   // const userId2 = userByPassword.dataValues.id;
+//   console.log(userByPassword)
+//   // console.log(userId2)
+
+//   if (userId1 = userId2) {
+//     const loggedInUser  = await User.findByPk(userId1);
+//     res.status(200)
+//     return res.json(loggedInUser )
+//   }
+// })
 
 
 
