@@ -23,7 +23,7 @@ router.post('/test', function(req, res) {
 router.get('/set-token-cookie', async (_req, res) => {
   const user = await User.findOne({
     where: {
-      username: 'Demo-lition'
+      username: 'User1'
     }
   });
   setTokenCookie(res, user);
@@ -32,9 +32,7 @@ router.get('/set-token-cookie', async (_req, res) => {
 
 // backend/routes/api/index.js
 // ...
-router.get(
-  '/restore-user',
-  (req, res) => {
+router.get('/restore-user', (req, res) => {
     return res.json(req.user);
   }
 );
