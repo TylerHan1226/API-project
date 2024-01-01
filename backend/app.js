@@ -12,16 +12,20 @@ const isProduction = environment === 'production';
 const app = express();
 
 app.use(morgan('dev'));
-
 app.use(cookieParser());
 app.use(express.json());
+// backend/app.js
+const routes = require('./routes');
+
+// ...
+
+app.use(routes); // Connect all the routes
 
 // Security Middleware
 if (!isProduction) {
     // enable cors only in development
     app.use(cors());
   }
-  
   // helmet helps set a variety of headers to better secure your app
   app.use(
     helmet.crossOriginResourcePolicy({
@@ -40,12 +44,7 @@ if (!isProduction) {
     })
   );
 
-// backend/app.js
-const routes = require('./routes');
 
-// ...
-
-app.use(routes); // Connect all the routes
 
 // backend/app.js
 // ...
