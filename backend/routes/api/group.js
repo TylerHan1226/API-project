@@ -24,8 +24,7 @@ router.get('/', async (req, res) => {
     res.status(200)
     res.json(groups)
 })
-// Error: "SQLITE_ERROR: no such column: Group.groupId"???
-// problem with association?? happens when deploy too
+
 
 
 // Get all Groups joined or organized by the Current User
