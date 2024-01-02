@@ -14,27 +14,6 @@ router.use((req, res, next) => {
   next();
 });
 
-// router.post('/', async (req, res) => {
-//   const { email, password, username } = req.body;
-//   const hashedPassword = bcrypt.hashSync(password);
-//   const user = await User.create({ email, username, hashedPassword });
-
-//   const safeUser = {
-//     id: user.id,
-//     email: user.email,
-//     username: user.username,
-//     // lastName: user.lastName,
-//     // firstName: user.firstName
-//   };
-
-//   await setTokenCookie(res, safeUser);
-
-//   return res.json({
-//     user: safeUser
-//   });
-// }
-// );
-
 // backend/routes/api/users.js
 // ...
 const validateSignup = [
@@ -59,7 +38,9 @@ const validateSignup = [
 
 // Sign up
 router.post('/', validateSignup, async (req, res) => {
+  // console.log('Request Body:', req.body);
   const { email, password, username } = req.body;
+  
   const hashedPassword = bcrypt.hashSync(password);
   const user = await User.create({ email, username, hashedPassword });
 
@@ -78,22 +59,59 @@ router.post('/', validateSignup, async (req, res) => {
 );
 
 
-// router.get('/:id', async (req, res) => {
-//   // console.log('Fetching user details');
-//   const {id} = req.params;
-//   const user = await User.findByPk(id, {})
-
-//   res.json(user)
-// })
-
-router.get('/:id', async (req, res) => {
-  console.log('Fetching user details');
-  const { id } = req.params;
-  const user = await User.findByPk(id, {});
-  // console.log(user); // Add this line to log user details
-  res.json({'user': user});
+//Get the Current User
+router.get('/', requireAuth, (req, res) => {
+  const { user } = req;
+  if (user) {
+    const safeUser = {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+    };
+    res.status(200)
+    return res.json({ user: safeUser });
+  } else {
+    return res.json({ user: null });
+  }
 });
+//Error: Authentication required
 
+
+
+// Log In a User
+router.post('/logIn', async (req, res) => {
+  const { credential, password } = req.query;
+  // const hashedPassword = bcrypt.hashSync(password);
+  console.log(credential)
+  console.log(password)
+  // console.log(hashedPassword)
+  
+  //get user by email
+  const userByEmail = await User.findAll({
+    where: {email: credential}
+  })
+  // const userId1 = userByEmail.dataValues.id;
+  console.log(userByEmail)
+  // console.log(userId1)
+  console.log(bcrypt.hashSync('password'))
+
+  //get user by password?
+  const userByPassword = await User.findAll({
+    where: {hashedPassword: bcrypt.hashSync(password)}
+  })
+  // const userId2 = userByPassword.dataValues.id;
+  console.log(userByPassword)
+  // console.log(userId2)
+
+  //compare id? How can I compare hashed password?
+  if (userId1 = userId2) {
+    const loggedInUser  = await User.findByPk(userId1);
+    res.status(200)
+    return res.json(loggedInUser )
+  }
+})
+
+//Not getting the hashed password correctly??
 
 
 

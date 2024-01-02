@@ -7,13 +7,13 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       User.belongsToMany(models.Group, {
-        through: 'Membership',
+        through: models.Membership,
         foreignKey: 'userId',
         otherKey: 'groupId'
       })
 
       User.belongsToMany(models.Event, {
-        through: 'Attendance',
+        through: models.Attendance,
         foreignKey: 'userId',
         otherKey: 'eventId'
       })
@@ -63,7 +63,7 @@ module.exports = (sequelize, DataTypes) => {
       modelName: "User",
       defaultScope: {
         attributes: {
-          exclude: ["hashedPassword", "email", "createdAt", "updatedAt"]
+          exclude: ["hashedPassword", "createdAt", "updatedAt"]
         }
       }
     }

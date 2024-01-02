@@ -3,7 +3,7 @@ const {
   Model
 } = require('sequelize');
 
-const { Membership } = require('../models')
+// const { Membership } = require('../models')
 
 module.exports = (sequelize, DataTypes) => {
   class Group extends Model {
@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       // define association here
       Group.belongsToMany(models.User, {
-        through: 'Membership',
+        through: models.Membership,
         foreignKey: 'groupId',
         otherKey: 'userId'
       })
