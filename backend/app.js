@@ -19,7 +19,7 @@ const routes = require('./routes');
 
 // ...
 
-app.use(routes); // Connect all the routes
+// app.use(routes); // Connect all the routes
 
 // Security Middleware
 if (!isProduction) {
@@ -44,7 +44,7 @@ if (!isProduction) {
     })
   );
 
-
+app.use(routes);
 
 // backend/app.js
 // ...
@@ -93,5 +93,6 @@ app.use((err, _req, res, _next) => {
 
 // backend/app.js
 // ...
+ // Connect all the routes
 
 module.exports = app;

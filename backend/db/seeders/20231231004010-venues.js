@@ -18,7 +18,7 @@ module.exports = {
         city: 'Los Angeles',
         state: 'California',
         lat: 33.75275573889709,
-        Ing: -118.19029468561867
+        lng: -118.19029468561867
       },
       {
         groupId: 2,
@@ -26,7 +26,7 @@ module.exports = {
         city: 'Los Angeles',
         state: 'California',
         lat: 34.03280014054085,
-        Ing: -118.45735745150874
+        lng: -118.45735745150874
       },
       {
         groupId: 3,
@@ -34,7 +34,7 @@ module.exports = {
         city: 'New York',
         state: 'New York',
         lat: 40.829255852380655, 
-        Ing: -73.93618024723602
+        lng: -73.93618024723602
       },
       {
         groupId: 4,
@@ -42,7 +42,7 @@ module.exports = {
         city: 'San Francisco',
         state: 'California',
         lat: 37.810791424525696, 
-        Ing: -122.47708390718321
+        lng: -122.47708390718321
       },
       {
         groupId: 5,
@@ -50,7 +50,7 @@ module.exports = {
         city: 'Los Angeles',
         state: 'California',
         lat: 34.087956995679946,
-        Ing: -118.47566745911918
+        lng: -118.47566745911918
       }
     ], options)
   },
