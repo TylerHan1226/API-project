@@ -83,7 +83,7 @@ router.get('/current', requireAuth, async (req, res) => {
         }));
 
         res.status(200)
-        return res.json(Groups)
+        return res.json({ Groups: Groups })
     }
 })
 
@@ -146,8 +146,87 @@ router.get('/:groupId', requireAuth, async (req, res) => {
     res.status(200)
     return res.json(response);
 })
-// needs to add numMembers, GroupImages, Organizer, Venues
-// Error: SQLITE_ERROR: no such column: groupId
+
+
+
+//Create a Group
+router.post('/', requireAuth, async (req, res) => {
+    const { name, about, type, private, city, state } = req.body
+
+    const newGroup = Group.build({
+        name, about, type, private, city, state
+    })
+
+    await newGroup.save()
+    res.status(200)
+    res.json(newGroup)
+})
+
+
+
+// Add an Image to a Group based on the Group's id
+router.post('/:groupId/images', requireAuth, async (req, res) => {
+    const { url, preview } = req.body
+    const groupId = req.params.groupId
+    const newGroupImage = GroupImage.build({
+        groupId, url, preview
+    })
+    await newGroupImage.save()
+    res.status(200)
+    res.json(newGroupImage)
+})
+
+
+
+//Edit a Group
+router.put('/:groupId', requireAuth, async (req, res) => {
+    const groupId = req.params.groupId
+    const { name, about, type, private, city, state} = req.body
+
+    const group = await Group.findOne({
+        where: {id: groupId}
+    })
+
+    if (name) {
+        group.name = name
+    }
+    if (about) {
+        group.about = about
+    }
+    if (type) {
+        group.type = type
+    }
+    if (private) {
+        group.private = private
+    }
+    if (city) {
+        group.city = city
+    }
+    if (state) {
+        group.state = state
+    }
+    await group.save()
+
+    res.status(200)
+    res.json(group)
+})
+
+
+
+//Delete a Group
+router.delete('/:groupId', requireAuth, async (req, res) => {
+    const groupId = req.params.groupId
+
+    const group = await Group.findByPk(groupId)
+    await group.destroy()
+
+    res.status(200)
+    res.json({"message": "Successfully deleted"})
+})
+// SQLITE_CONSTRAINT: FOREIGN KEY constraint failed
+
+
+
 
 
 
