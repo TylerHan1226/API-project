@@ -16,12 +16,42 @@ router.use((req, res, next) => {
 });
 
 //Get all Groups
-router.get('/', async (req, res) => {
-    const groups = await Group.findAll({
-        include: [{ model: User }]
+router.get('/', requireAuth, async (req, res) => {
+    const groups = await Group.findAll()
+    const members = await Membership.findAll()
+    const groupIds = await Group.findAll({
+        attributes: ['id']
     })
-    res.status(200)
-    return res.json({ 'Groups': groups })
+    const groupIdsArr = groupIds.map(element => element.id);
+    
+    const numMembersArr = [];
+        for (const eachId of groupIdsArr) {
+            const groupsArr = members.filter(ele => ele.groupId === eachId);
+            numMembersArr.push(groupsArr.length);
+        }
+    // => [3,2,3,3,2]
+
+    const groupImages = await GroupImage.findAll({
+        where: { groupId: groupIdsArr, preview: true },
+        attributes: ["url"]
+    })
+    //=> [{url: }, {url: }, ...]
+    const resultGroups = groups.map((eachGroup, groupIndex) => ({
+        id: eachGroup.id,
+        organizerId: eachGroup.organizerId,
+        name: eachGroup.name,
+        about: eachGroup.about,
+        type: eachGroup.type,
+        private: eachGroup.private,
+        city: eachGroup.city,
+        state: eachGroup.state,
+        createdAt: eachGroup.createdAt,
+        updatedAt: eachGroup.updatedAt,
+        numMembers: numMembersArr[groupIndex],
+        previewImage: groupImages[groupIndex]?.url || null,
+    }))
+
+    return res.status(200).json({ 'Groups': resultGroups })
 })
 //add numMembers, previewImage
 
@@ -58,12 +88,12 @@ router.get('/current', requireAuth, async (req, res) => {
         const numMembersArr = [];
         for (const eachId of groupIdsArr) {
             const groupsArr = members.filter(ele => ele.groupId === eachId);
-            numMembersArr.push(groupsArr.length);
+            numMembersArr.push(groupsArr.length)
         }
         //=> [3, 3, 3, 2]
 
         const groupImages = await GroupImage.findAll({
-            where: { groupId: groupIdsArr },
+            where: { groupId: groupIdsArr, preview: true },
             attributes: ["url"]
         })
         //=> [{url: }, {url: }, ...]
@@ -80,10 +110,9 @@ router.get('/current', requireAuth, async (req, res) => {
             updatedAt: eachGroup.updatedAt,
             numMembers: numMembersArr[groupIndex],
             previewImage: groupImages[groupIndex]?.url || null,
-        }));
+        }))
 
-        res.status(200)
-        return res.json({ Groups: Groups })
+        return res.status(200).json({ Groups: Groups })
     }
 })
 
@@ -148,8 +177,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
 
     } catch (error) {
         console.error(error)
-        res.status(404)
-        return res.json({ "message": "Group couldn't be found" })
+        return res.status(404).json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -157,7 +185,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
 
 //Create a Group
 router.post('/', requireAuth, async (req, res) => {
-
+    const { name, about, type, private, city, state } = req.body
     // validate
     const validationErrorsObj = {};
     if (!name || name.length > 60) {
@@ -186,13 +214,13 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     //build
-    const { name, about, type, private, city, state } = req.body
+    
     const newGroup = Group.build({
         name, about, type, private, city, state
     })
     await newGroup.save()
-    res.status(201)
-    return res.json(newGroup)
+
+    return res.status(201).json(newGroup)
 
 })
 
@@ -201,18 +229,32 @@ router.post('/', requireAuth, async (req, res) => {
 // Add an Image to a Group based on the Group's id
 router.post('/:groupId/images', requireAuth, async (req, res) => {
     try {
+        const { user } = req
+        const userId = user.id
         const { url, preview } = req.body
         const groupId = req.params.groupId
-        const newGroupImage = GroupImage.build({
-            groupId, url, preview
-        })
-        await newGroupImage.save()
-        res.status(200)
-        return res.json(newGroupImage)
+        const groupIdInt = parseInt(groupId)
+
+        if (groupId == userId) {
+            const newGroupImage = GroupImage.build({
+                groupId, url, preview
+            })
+
+            const resultNewGroupImage = {
+                id: newGroupImage.id,
+                url: newGroupImage.url,
+                preview: newGroupImage.preview
+            }
+
+            await newGroupImage.save()
+            return res.status(200).json(resultNewGroupImage)
+        } else {
+            console.error(error)
+        }
+       
     } catch (error) {
         console.error(error)
-        res.status(404)
-        return res.json({ "message": "Group couldn't be found" })
+        return res.status(404).json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -220,26 +262,26 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
 
 //Edit a Group
 router.put('/:groupId', requireAuth, async (req, res) => {
-
+    const { name, about, type, private, city, state } = req.body
     // validate
     const validationErrorsObj = {};
     if (!name || name.length > 60) {
-        validationErrorsObj.name = 'Name must be 60 characters or less';
+        validationErrorsObj.name = 'Name must be 60 characters or less'
     }
     if (!about || about.length < 50) {
-        validationErrorsObj.about = 'About must be 50 characters or more';
+        validationErrorsObj.about = 'About must be 50 characters or more'
     }
     if (!type || !['Online', 'In person'].includes(type)) {
-        validationErrorsObj.type = "Type must be 'Online' or 'In person'";
+        validationErrorsObj.type = "Type must be 'Online' or 'In person'"
     }
     if (private === undefined || typeof private !== 'boolean') {
-        validationErrorsObj.private = 'Private must be a boolean';
+        validationErrorsObj.private = 'Private must be a boolean'
     }
     if (!city) {
-        validationErrorsObj.city = 'City is required';
+        validationErrorsObj.city = 'City is required'
     }
     if (!state) {
-        validationErrorsObj.state = 'State is required';
+        validationErrorsObj.state = 'State is required'
     }
     if (Object.keys(validationErrorsObj).length > 0) {
         return res.status(400).json({
@@ -251,38 +293,23 @@ router.put('/:groupId', requireAuth, async (req, res) => {
     //build/edit
     try {
         const groupId = req.params.groupId
-        const { name, about, type, private, city, state } = req.body
-
         const group = await Group.findOne({
             where: { id: groupId }
         })
 
-        if (name) {
-            group.name = name
-        }
-        if (about) {
-            group.about = about
-        }
-        if (type) {
-            group.type = type
-        }
-        if (private) {
-            group.private = private
-        }
-        if (city) {
-            group.city = city
-        }
-        if (state) {
-            group.state = state
-        }
+        group.name = name
+        group.about = about
+        group.type = type
+        group.private = private
+        group.city = city
+        group.state = state
         await group.save()
 
         res.status(200)
         return res.json(group)
     } catch (error) {
         console.error(error)
-        res.status(404)
-        return res.json({ "message": "Group couldn't be found" })
+        return res.status(404).json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -300,8 +327,7 @@ router.delete('/:groupId', requireAuth, async (req, res) => {
         return res.json({ "message": "Successfully deleted" })
     } catch (error) {
         console.error(error)
-        res.status(404)
-        return res.json({ "message": "Group couldn't be found" })
+        return res.status(404).json({ "message": "Group couldn't be found" })
     }
 })
 

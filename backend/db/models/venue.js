@@ -30,9 +30,15 @@ module.exports = (sequelize, DataTypes) => {
     state: DataTypes.STRING,
     lat: DataTypes.DECIMAL,
     lng: DataTypes.DECIMAL
-  }, {
-    sequelize,
-    modelName: 'Venue',
-  });
+  },
+    {
+      sequelize,
+      modelName: 'Venue',
+      defaultScope: {
+        attributes: {
+          exclude: ["createdAt", "updatedAt"]
+        }
+      }
+    });
   return Venue;
 };
