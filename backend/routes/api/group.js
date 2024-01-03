@@ -93,141 +93,218 @@ router.get('/current', requireAuth, async (req, res) => {
 
 // Get details of a Group from an id
 router.get('/:groupId', requireAuth, async (req, res) => {
-    const id = req.params.groupId
-    const groups = await Group.findByPk(id);
+    try {
+        const id = req.params.groupId
+        const groups = await Group.findByPk(id);
 
-    //get number of members from Membership
-    const members = await Membership.findAll({
-        where: { groupId: id }
-    })
-    const numMembers = members.length;
-    // => 3
+        //get number of members from Membership
+        const members = await Membership.findAll({
+            where: { groupId: id }
+        })
+        const numMembers = members.length;
+        // => 3
 
-    //get groupImages
-    const groupImages = await GroupImage.findAll({
-        where: { groupId: id },
-        attributes: ["id", "url", "preview"]
-    });
-    // => [{"id":..., "url":..., "preview":...}]
+        //get groupImages
+        const groupImages = await GroupImage.findAll({
+            where: { groupId: id },
+            attributes: ["id", "url", "preview"]
+        });
+        // => [{"id":..., "url":..., "preview":...}]
 
-    //get organizer
-    const organizer = await User.findAll({
-        where: { id: groups.organizerId },
-        attributes: ["id", "firstName", "lastName"]
-    });
-    // => [{"id", "firstName", "lastName"}]
+        //get organizer
+        const organizer = await User.findAll({
+            where: { id: groups.organizerId },
+            attributes: ["id", "firstName", "lastName"]
+        });
+        // => [{"id", "firstName", "lastName"}]
 
-    //get Venues
-    const venues = await Venue.findAll({
-        where: {
-            groupId: id
-        },
-        attributes: ["id", "groupId", "address", "city", "state", "lat", "lng"]
-    });
-    // const venuesJson = venues.toJSON()
-    // console.log("venues (json) ===> ", venuesJson)
-    const response = {
-        id: groups.id,
-        organizerId: groups.organizerId,
-        name: groups.name,
-        about: groups.about,
-        type: groups.type,
-        private: groups.private,
-        city: groups.city,
-        state: groups.state,
-        createdAt: groups.createdAt,
-        updatedAt: groups.updatedAt,
-        numMembers: numMembers,
-        GroupImages: groupImages,
-        Organizer: organizer,
-        Venues: venues
-    };
+        //get Venues
+        const venues = await Venue.findAll({
+            where: {
+                groupId: id
+            },
+            attributes: ["id", "groupId", "address", "city", "state", "lat", "lng"]
+        });
+        // const venuesJson = venues.toJSON()
+        // console.log("venues (json) ===> ", venuesJson)
+        const response = {
+            id: groups.id,
+            organizerId: groups.organizerId,
+            name: groups.name,
+            about: groups.about,
+            type: groups.type,
+            private: groups.private,
+            city: groups.city,
+            state: groups.state,
+            createdAt: groups.createdAt,
+            updatedAt: groups.updatedAt,
+            numMembers: numMembers,
+            GroupImages: groupImages,
+            Organizer: organizer,
+            Venues: venues
+        };
+        res.status(200)
+        return res.json(response);
 
-    res.status(200)
-    return res.json(response);
+    } catch (error) {
+        console.error(error)
+        res.status(404)
+        res.json({ "message": "Group couldn't be found" })
+    }
 })
 
 
 
 //Create a Group
 router.post('/', requireAuth, async (req, res) => {
-    const { name, about, type, private, city, state } = req.body
 
+    // validate
+    const validationErrorsObj = {};
+    if (!name || name.length > 60) {
+        validationErrorsObj.name = 'Name must be 60 characters or less';
+    }
+    if (!about || about.length < 50) {
+        validationErrorsObj.about = 'About must be 50 characters or more';
+    }
+    if (!type || !['Online', 'In person'].includes(type)) {
+        validationErrorsObj.type = "Type must be 'Online' or 'In person'";
+    }
+    if (private === undefined || typeof private !== 'boolean') {
+        validationErrorsObj.private = 'Private must be a boolean';
+    }
+    if (!city) {
+        validationErrorsObj.city = 'City is required';
+    }
+    if (!state) {
+        validationErrorsObj.state = 'State is required';
+    }
+    if (Object.keys(validationErrorsObj).length > 0) {
+        return res.status(400).json({
+            message: 'Bad Request',
+            errors: validationErrorsObj,
+        });
+    }
+
+    //build
+    const { name, about, type, private, city, state } = req.body
     const newGroup = Group.build({
         name, about, type, private, city, state
     })
-
     await newGroup.save()
-    res.status(200)
+    res.status(201)
     res.json(newGroup)
+
 })
 
 
 
 // Add an Image to a Group based on the Group's id
 router.post('/:groupId/images', requireAuth, async (req, res) => {
-    const { url, preview } = req.body
-    const groupId = req.params.groupId
-    const newGroupImage = GroupImage.build({
-        groupId, url, preview
-    })
-    await newGroupImage.save()
-    res.status(200)
-    res.json(newGroupImage)
+    try {
+        const { url, preview } = req.body
+        const groupId = req.params.groupId
+        const newGroupImage = GroupImage.build({
+            groupId, url, preview
+        })
+        await newGroupImage.save()
+        res.status(200)
+        res.json(newGroupImage)
+    } catch (error) {
+        console.error(error)
+        res.status(404)
+        res.json({ "message": "Group couldn't be found" })
+    }
 })
 
 
 
 //Edit a Group
 router.put('/:groupId', requireAuth, async (req, res) => {
-    const groupId = req.params.groupId
-    const { name, about, type, private, city, state} = req.body
 
-    const group = await Group.findOne({
-        where: {id: groupId}
-    })
+    // validate
+    const validationErrorsObj = {};
+    if (!name || name.length > 60) {
+        validationErrorsObj.name = 'Name must be 60 characters or less';
+    }
+    if (!about || about.length < 50) {
+        validationErrorsObj.about = 'About must be 50 characters or more';
+    }
+    if (!type || !['Online', 'In person'].includes(type)) {
+        validationErrorsObj.type = "Type must be 'Online' or 'In person'";
+    }
+    if (private === undefined || typeof private !== 'boolean') {
+        validationErrorsObj.private = 'Private must be a boolean';
+    }
+    if (!city) {
+        validationErrorsObj.city = 'City is required';
+    }
+    if (!state) {
+        validationErrorsObj.state = 'State is required';
+    }
+    if (Object.keys(validationErrorsObj).length > 0) {
+        return res.status(400).json({
+            message: 'Bad Request',
+            errors: validationErrorsObj,
+        });
+    }
 
-    if (name) {
-        group.name = name
-    }
-    if (about) {
-        group.about = about
-    }
-    if (type) {
-        group.type = type
-    }
-    if (private) {
-        group.private = private
-    }
-    if (city) {
-        group.city = city
-    }
-    if (state) {
-        group.state = state
-    }
-    await group.save()
+    //build/edit
+    try {
+        const groupId = req.params.groupId
+        const { name, about, type, private, city, state } = req.body
 
-    res.status(200)
-    res.json(group)
+        const group = await Group.findOne({
+            where: { id: groupId }
+        })
+
+        if (name) {
+            group.name = name
+        }
+        if (about) {
+            group.about = about
+        }
+        if (type) {
+            group.type = type
+        }
+        if (private) {
+            group.private = private
+        }
+        if (city) {
+            group.city = city
+        }
+        if (state) {
+            group.state = state
+        }
+        await group.save()
+
+        res.status(200)
+        res.json(group)
+    } catch (error) {
+        console.error(error)
+        res.status(404)
+        res.json({ "message": "Group couldn't be found" })
+    }
 })
 
 
 
 //Delete a Group
 router.delete('/:groupId', requireAuth, async (req, res) => {
-    const groupId = req.params.groupId
+    try {
+        const groupId = req.params.groupId
 
-    const group = await Group.findByPk(groupId)
-    await group.destroy()
+        const group = await Group.findByPk(groupId)
+        await group.destroy()
 
-    res.status(200)
-    res.json({"message": "Successfully deleted"})
+        res.status(200)
+        res.json({ "message": "Successfully deleted" })
+    } catch (error) {
+        console.error(error)
+        res.status(404)
+        res.json({ "message": "Group couldn't be found" })
+    }
 })
 // SQLITE_CONSTRAINT: FOREIGN KEY constraint failed
-
-
-
-
 
 
 
