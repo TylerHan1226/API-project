@@ -7,11 +7,7 @@ const {
 
 module.exports = (sequelize, DataTypes) => {
   class GroupImage extends Model {
-    /**
-     * Helper method for defining associations.
-     * This method is not a part of Sequelize lifecycle.
-     * The `models/index` file will call this method automatically.
-     */
+
     static associate(models) {
       // define association here
       GroupImage.belongsTo(models.Group, {
@@ -21,9 +17,7 @@ module.exports = (sequelize, DataTypes) => {
   }
   GroupImage.init({
     groupId: {
-      type: DataTypes.INTEGER,
-      onDelete: 'CASCADE',
-      hooks: true
+      type: DataTypes.INTEGER
     },
     url: DataTypes.STRING,
     preview: DataTypes.BOOLEAN

@@ -18,7 +18,9 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'groupId'
       })
       Event.hasMany(models.EventImage, {
-        foreignKey: 'eventId'
+        foreignKey: 'eventId',
+        onDelete: 'CASCADE',
+        hooks: true
       })
 
       Event.belongsToMany(models.User, {
@@ -31,9 +33,7 @@ module.exports = (sequelize, DataTypes) => {
   Event.init({
     venueId: DataTypes.INTEGER,
     groupId: {
-      type: DataTypes.INTEGER,
-      onDelete: 'CASCADE',
-      hooks: true
+      type: DataTypes.INTEGER
     },
     name: DataTypes.STRING,
     description: DataTypes.TEXT,

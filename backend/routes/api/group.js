@@ -3,13 +3,12 @@ const router = express.Router();
 const { Op, or } = require('sequelize');
 // const bcrypt = require('bcryptjs');
 
-const { setTokenCookie, requireAuth, restoreUser } = require('../../utils/auth');
+const { requireAuth } = require('../../utils/auth');
 
 const { User, Group, GroupImage, Membership, Venue } = require('../../db/models');
 
 const { check } = require('express-validator');
 const { handleValidationErrors } = require('../../utils/validation');
-const group = require('../../db/models/group');
 
 router.use((req, res, next) => {
     console.log('Group route hit!');
@@ -22,8 +21,9 @@ router.get('/', async (req, res) => {
         include: [{ model: User }]
     })
     res.status(200)
-    res.json({ 'Groups': groups })
+    return res.json({ 'Groups': groups })
 })
+//add numMembers, previewImage
 
 
 
@@ -149,7 +149,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
     } catch (error) {
         console.error(error)
         res.status(404)
-        res.json({ "message": "Group couldn't be found" })
+        return res.json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -192,7 +192,7 @@ router.post('/', requireAuth, async (req, res) => {
     })
     await newGroup.save()
     res.status(201)
-    res.json(newGroup)
+    return res.json(newGroup)
 
 })
 
@@ -208,11 +208,11 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
         })
         await newGroupImage.save()
         res.status(200)
-        res.json(newGroupImage)
+        return res.json(newGroupImage)
     } catch (error) {
         console.error(error)
         res.status(404)
-        res.json({ "message": "Group couldn't be found" })
+        return res.json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -278,11 +278,11 @@ router.put('/:groupId', requireAuth, async (req, res) => {
         await group.save()
 
         res.status(200)
-        res.json(group)
+        return res.json(group)
     } catch (error) {
         console.error(error)
         res.status(404)
-        res.json({ "message": "Group couldn't be found" })
+        return res.json({ "message": "Group couldn't be found" })
     }
 })
 
@@ -297,14 +297,14 @@ router.delete('/:groupId', requireAuth, async (req, res) => {
         await group.destroy()
 
         res.status(200)
-        res.json({ "message": "Successfully deleted" })
+        return res.json({ "message": "Successfully deleted" })
     } catch (error) {
         console.error(error)
         res.status(404)
-        res.json({ "message": "Group couldn't be found" })
+        return res.json({ "message": "Group couldn't be found" })
     }
 })
-// SQLITE_CONSTRAINT: FOREIGN KEY constraint failed
+
 
 
 
