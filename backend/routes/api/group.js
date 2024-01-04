@@ -23,20 +23,20 @@ router.get('/', requireAuth, async (req, res) => {
         attributes: ['id']
     })
     const groupIdsArr = groupIds.map(element => element.id);
-    
+
     const numMembersArr = [];
-        for (const eachId of groupIdsArr) {
-            const groupsArr = members.filter(ele => ele.groupId === eachId);
-            numMembersArr.push(groupsArr.length);
-        }
+    for (const eachId of groupIdsArr) {
+        const groupsArr = members.filter(ele => ele.groupId === eachId);
+        numMembersArr.push(groupsArr.length);
+    }
     // => [3,2,3,3,2]
 
     const groupImages = await GroupImage.findAll({
         where: { groupId: groupIdsArr, preview: true },
-        attributes: ["url"]
+        // attributes: ["url"]
     })
     //=> [{url: }, {url: }, ...]
-    const resultGroups = groups.map((eachGroup, groupIndex) => ({
+    let resultGroups = groups.map((eachGroup, groupIndex) => ({
         id: eachGroup.id,
         organizerId: eachGroup.organizerId,
         name: eachGroup.name,
@@ -47,13 +47,21 @@ router.get('/', requireAuth, async (req, res) => {
         state: eachGroup.state,
         createdAt: eachGroup.createdAt,
         updatedAt: eachGroup.updatedAt,
-        numMembers: numMembersArr[groupIndex],
-        previewImage: groupImages[groupIndex]?.url || null,
+        numMembers: numMembersArr[groupIndex]
     }))
+
+    for (let eachGroupImage of groupImages) {
+        for (let eachResultGroups of resultGroups) {
+            if (eachGroupImage.id == eachResultGroups.id) {
+                let eachGroupImageUrl = eachGroupImage.url
+                eachResultGroups.previewImage = eachGroupImageUrl
+            }
+        }
+    }
 
     return res.status(200).json({ 'Groups': resultGroups })
 })
-//add numMembers, previewImage
+
 
 
 
@@ -93,11 +101,10 @@ router.get('/current', requireAuth, async (req, res) => {
         //=> [3, 3, 3, 2]
 
         const groupImages = await GroupImage.findAll({
-            where: { groupId: groupIdsArr, preview: true },
-            attributes: ["url"]
+            where: { groupId: groupIdsArr, preview: true }
         })
         //=> [{url: }, {url: }, ...]
-        const Groups = groups.map((eachGroup, groupIndex) => ({
+        let resultGroups = groups.map((eachGroup, groupIndex) => ({
             id: eachGroup.id,
             organizerId: eachGroup.organizerId,
             name: eachGroup.name,
@@ -108,11 +115,19 @@ router.get('/current', requireAuth, async (req, res) => {
             state: eachGroup.state,
             createdAt: eachGroup.createdAt,
             updatedAt: eachGroup.updatedAt,
-            numMembers: numMembersArr[groupIndex],
-            previewImage: groupImages[groupIndex]?.url || null,
+            numMembers: numMembersArr[groupIndex]
         }))
 
-        return res.status(200).json({ Groups: Groups })
+        for (let eachGroupImage of groupImages) {
+            for (let eachResultGroups of resultGroups) {
+                if (eachGroupImage.id == eachResultGroups.id) {
+                    let eachGroupImageUrl = eachGroupImage.url
+                    eachResultGroups.previewImage = eachGroupImageUrl
+                }
+            }
+        }
+
+        return res.status(200).json({ Groups: resultGroups })
     }
 })
 
@@ -156,7 +171,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
         });
         // const venuesJson = venues.toJSON()
         // console.log("venues (json) ===> ", venuesJson)
-        const response = {
+        const resultGroup = {
             id: groups.id,
             organizerId: groups.organizerId,
             name: groups.name,
@@ -172,8 +187,8 @@ router.get('/:groupId', requireAuth, async (req, res) => {
             Organizer: organizer,
             Venues: venues
         };
-        res.status(200)
-        return res.json(response);
+        
+        return res.status(200).json(resultGroup);
 
     } catch (error) {
         console.error(error)
@@ -214,7 +229,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     //build
-    
+
     const newGroup = Group.build({
         name, about, type, private, city, state
     })
@@ -233,7 +248,6 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
         const userId = user.id
         const { url, preview } = req.body
         const groupId = req.params.groupId
-        const groupIdInt = parseInt(groupId)
 
         if (groupId == userId) {
             const newGroupImage = GroupImage.build({
@@ -251,7 +265,7 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
         } else {
             console.error(error)
         }
-       
+
     } catch (error) {
         console.error(error)
         return res.status(404).json({ "message": "Group couldn't be found" })
