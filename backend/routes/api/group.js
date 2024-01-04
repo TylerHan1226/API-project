@@ -276,6 +276,13 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
 
 //Edit a Group
 router.put('/:groupId', requireAuth, async (req, res) => {
+
+    const { user } = req
+    const userId = user.id
+    const groupId = req.params.groupId
+
+    if (groupId == userId) {
+        
     const { name, about, type, private, city, state } = req.body
     // validate
     const validationErrorsObj = {};
@@ -305,8 +312,7 @@ router.put('/:groupId', requireAuth, async (req, res) => {
     }
 
     //build/edit
-    try {
-        const groupId = req.params.groupId
+
         const group = await Group.findOne({
             where: { id: groupId }
         })
@@ -321,26 +327,29 @@ router.put('/:groupId', requireAuth, async (req, res) => {
 
         res.status(200)
         return res.json(group)
-    } catch (error) {
-        console.error(error)
-        return res.status(404).json({ "message": "Group couldn't be found" })
+    } else {
+        return res.status(404).json({
+            "message": "Group couldn't be found"
+        })
     }
+
 })
 
 
 
 //Delete a Group
 router.delete('/:groupId', requireAuth, async (req, res) => {
-    try {
-        const groupId = req.params.groupId
-
+    
+    const { user } = req
+    const userId = user.id
+    const groupId = req.params.groupId
+    if (userId == groupId) {
         const group = await Group.findByPk(groupId)
         await group.destroy()
 
         res.status(200)
         return res.json({ "message": "Successfully deleted" })
-    } catch (error) {
-        console.error(error)
+    } else {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
 })
