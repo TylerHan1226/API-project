@@ -253,6 +253,7 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
             const newGroupImage = GroupImage.build({
                 groupId, url, preview
             })
+            await newGroupImage.save()
 
             const resultNewGroupImage = {
                 id: newGroupImage.id,
@@ -260,7 +261,6 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
                 preview: newGroupImage.preview
             }
 
-            await newGroupImage.save()
             return res.status(200).json(resultNewGroupImage)
         } else {
             console.error(error)

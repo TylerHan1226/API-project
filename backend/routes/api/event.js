@@ -91,13 +91,13 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
             },
             attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
         })
-    
+
         const eventIds = await Event.findAll({
             attributes: ['id']
         })
         const eventIdsArr = eventIds.map(element => element.id);
         // => [1, 2, 3, 4, 5]
-    
+
         const attendances = await Attendance.findAll()
         const numAttending = [];
         for (const eachId of eventIdsArr) {
@@ -105,16 +105,16 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
             numAttending.push(attArr.length);
         }
         // => [3, 5, 3, 4, 3]
-    
+
         const eventImages = await EventImage.findAll({
             where: { eventId: eventIdsArr, preview: true }
         })
         //=> [{url: }, {url: }, ...]
-    
+
         const groups = await Group.findAll({
             attributes: ['id', 'name', 'city', 'state']
         })
-    
+
         let resultEvents = events.map((eachEvent, eventIndex) => ({
             id: eachEvent.id,
             groupId: eachEvent.groupId,
@@ -125,8 +125,8 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
             endDate: eachEvent.endDate,
             numMembers: numAttending[eventIndex]
         }))
-    
-        
+
+
         for (let eachEventImage of eventImages) {
             for (let eachResultEvents of resultEvents) {
                 if (eachEventImage.id == eachResultEvents.id) {
@@ -165,7 +165,7 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
 
 //Get details of an Event specified by its id
 router.get('/events/:eventId', requireAuth, async (req, res) => {
-    
+
     try {
         const eventId = req.params.eventId
         const events = await Event.findByPk(eventId, {
@@ -220,15 +220,130 @@ router.get('/events/:eventId', requireAuth, async (req, res) => {
 
 //Create an Event for a Group specified by its id
 router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
-    const {venueId, name, type, capacity, price, description, startDate, endDate} = req.body
-    const groupId = req.params.groupId
+
+    try {
+        const { venueId, name, type, capacity, price, description, startDate, endDate } = req.body
+        const groupId = req.params.groupId
+
+        const validationErrorsObj = {}
+        const currentDate = new Date();
+        if (!name || name.length < 5) {
+            validationErrorsObj.name = 'Name must be at least 5 characters';
+        }
+        if (!type || !['Online', 'In person'].includes(type)) {
+            validationErrorsObj.type = 'Type must be Online or In person';
+        }
+        if (!Number.isInteger(capacity)) {
+            validationErrorsObj.capacity = 'Capacity must be an integer';
+        }
+        if (!typeof price === 'number') {
+            validationErrorsObj.price = 'Price is invalid';
+        }
+        if (!description) {
+            validationErrorsObj.description = 'Description is required';
+        }
+        if (startDate < currentDate) {
+            validationErrorsObj.startDate = 'Start date must be in the future';
+        }
+        if (endDate < startDate) {
+            validationErrorsObj.endDate = 'End date is less than start date';
+        }
+        if (Object.keys(validationErrorsObj).length > 0) {
+            return res.status(400).json({
+                message: 'Bad Request',
+                errors: validationErrorsObj
+            });
+        }
+
+        const newEvent = Event.build({
+            venueId, groupId, name, type, capacity, price, description, startDate, endDate
+        })
+
+        await newEvent.save()
+
+        const resultEvent = {
+            id: newEvent.id,
+            groupId: newEvent.groupId,
+            venueId: newEvent.venueId,
+            name: newEvent.name,
+            type: newEvent.type,
+            capacity: newEvent.capacity,
+            price: newEvent.price,
+            description: newEvent.description,
+            startDate: newEvent.startDate,
+            endDate: newEvent.endDate
+        }
+
+        return res.status(200).json(resultEvent)
+    } catch (error) {
+        console.error(error)
+        return res.status(404).json({ "message": "Venue couldn't be found" })
+    }
+})
+
+
+//Add an Image to an Event based on the Event's id
+router.post('/events/:eventId/images', requireAuth, async (req, res) => {
+    try {
+        const { user } = req
+        const userId = user.id
+        const eventId = req.params.eventId
+        const { url, preview } = req.body
+
+        const event = await Event.findByPk(eventId)
+        const groupId = event.groupId
+
+
+        const attendances = await Attendance.findAll({
+            where: { eventId: eventId },
+            attributes: ['userId']
+        })
+        // => [{'userId': }, {}, ...]
+        const attendeesIdArr = attendances.map(ele => ele.userId)
+        //  => [1, 4, 6]
+
+        const members = await Membership.findAll({
+            where: { groupId: groupId },
+            attributes: ['userId']
+        })
+        // => [{'userId': }, {}, ...]
+        const memberIdArr = members.map(ele => ele.userId)
+        // => [1, 4, 6]
+
+        if (attendeesIdArr.includes(userId) || memberIdArr.includes(userId)) {
+
+            const newEventImage = EventImage.build({
+                eventId, url, preview
+            })
+            await newEventImage.save()
+
+            const resultNewEventImage = {
+                id: newEventImage.id,
+                url: newEventImage.url,
+                preview: newEventImage.preview
+            }
+            return res.status(200).json(resultNewEventImage)
+        }
+
+    } catch (error) {
+        console.error(error)
+        return res.status(404).json({ "message": "Event couldn't be found" })
+    }
+})
+
+
+
+//Edit an Event specified by its id
+router.put('/events/:eventId', requireAuth, async (req, res) => {
+
+    const { venueId, name, type, capacity, price, description, startDate, endDate } = req.body
 
     const validationErrorsObj = {}
     const currentDate = new Date();
     if (!name || name.length < 5) {
         validationErrorsObj.name = 'Name must be at least 5 characters';
     }
-    if (!type ||!['Online', 'In person'].includes(type)) {
+    if (!type || !['Online', 'In person'].includes(type)) {
         validationErrorsObj.type = 'Type must be Online or In person';
     }
     if (!Number.isInteger(capacity)) {
@@ -253,30 +368,64 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
         });
     }
 
-    const newEvent = Event.build({
-        venueId, groupId, name, type, capacity, price, description, startDate, endDate
-    })
+    const eventId = req.params.eventId
+    const event = await Event.findByPk(eventId)
+    if (!event) {
+        return res.status(404).json({
+            message: "Event couldn't be found"
+        })
+    }
 
-    await newEvent.save()
+    const venuesIds = await Venue.findAll({
+        attributes: ['id']
+    })
+    // => [{id: 1}, {id: 2}, ...]
+    const venueIdArr = venuesIds.map(ele => ele.id)
+    if (!venueIdArr.includes(venueId)) {
+        return res.status(404).json({
+            message: "Venue couldn't be found"
+        })
+    }
+    event.venueId = venueId
+    event.name = name
+    event.type = type
+    event.capacity = capacity
+    event.price = price
+    event.description = description
+    event.startDate = startDate
+    event.endDate = endDate
 
     const resultEvent = {
-        id: newEvent.id,
-        groupId: newEvent.groupId,
-        venueId: newEvent.venueId,
-        name: newEvent.name,
-        type: newEvent.type,
-        capacity: newEvent.capacity,
-        price: newEvent.price,
-        description: newEvent.description,
-        startDate: newEvent.startDate,
-        endDate: newEvent.endDate
+        id: event.id,
+        groupId: event.groupId,
+        venueId: event.venueId,
+        name: event.name,
+        type: event.type,
+        capacity: event.capacity,
+        price: event.price,
+        description: event.description,
+        startDate: event.startDate,
+        endDate: event.endDate
     }
 
     return res.status(200).json(resultEvent)
 })
 
 
-
+//Delete an Event specified by its id
+router.delete('/events/:eventId', requireAuth, async (req, res) => {
+    const eventId = req.params.eventId
+    const event = await Event.findByPk(eventId)
+    if (!event) {
+        return res.status(404).json({
+            message: "Event couldn't be found"
+        })
+    }
+    await event.destroy()
+    return res.status(200).json({
+        "message": "Successfully deleted"
+      })
+})
 
 
 module.exports = router;
