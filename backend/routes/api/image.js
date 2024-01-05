@@ -36,6 +36,11 @@ router.delete('/group-images/:imageId', requireAuth, async (req, res) => {
             membershipIndex = memberships.indexOf(eachMembership)
         }
     }
+    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
+        return res.status(400).json({
+            "message": "Not Authorized"
+        })
+    }
 
     if (memberships[membershipIndex].status == 'host' || memberships[membershipIndex].status == 'co-host') {
         await groupImage.destroy()
@@ -77,6 +82,11 @@ router.delete('/event-images/:imageId', requireAuth, async (req, res) => {
         if (eachMembership.userId == user.id) {
             membershipIndex = memberships.indexOf(eachMembership)
         }
+    }
+    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
+        return res.status(400).json({
+            "message": "Not Authorized"
+        })
     }
 
     if (memberships[membershipIndex].status == 'host' || memberships[membershipIndex].status == 'co-host') {
