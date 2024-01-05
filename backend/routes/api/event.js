@@ -237,9 +237,17 @@ router.get('/events/:eventId', requireAuth, async (req, res) => {
 //Create an Event for a Group specified by its id
 router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
 
-    try {
+
         const { venueId, name, type, capacity, price, description, startDate, endDate } = req.body
         const groupId = req.params.groupId
+        const venue = await Venue.findByPk(venueId)
+        if (!venue) {
+            return res.status(404).json({ "message": "Venue couldn't be found" })
+        }
+        const group = await Venue.findByPk(groupId)
+        if (!group) {
+            return res.status(404).json({ "message": "Group couldn't be found" })
+        }
 
         const validationErrorsObj = {}
         const currentDate = new Date();
@@ -290,11 +298,8 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
             endDate: newEvent.endDate
         }
 
-        return res.status(200).json(resultEvent)
-    } catch (error) {
-        console.error(error)
-        return res.status(404).json({ "message": "Venue couldn't be found" })
-    }
+        return res.status(200).json(resultEvent)    
+
 })
 
 
