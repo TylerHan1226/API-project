@@ -76,7 +76,9 @@ router.post('/groups/:groupId/membership', requireAuth, async (req, res) => {
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
-    if (!memberships) {
+
+    const group = await Group.findByPk(groupId)
+    if (!group) {
         return res.status(404).json({
             "message": "Group couldn't be found"
         })
