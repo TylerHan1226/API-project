@@ -21,6 +21,9 @@ const handleValidationErrors = (req, _res, next) => {
   next();
 };
 
+//Add Query Filters to Get All Events
+
+
 module.exports = {
   handleValidationErrors
 };
