@@ -18,6 +18,12 @@ router.use((req, res, next) => {
 router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
 
     const groupId = req.params.groupId
+
+    const group = await Group.findByPk(groupId)
+    if (!group) {
+        return res.status(404).json({ "message": "Group couldn't be found" })
+    }
+
     // Authorization
     const { user } = req
     const memberships = await Membership.findAll({
@@ -41,10 +47,7 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         })
     }
 
-    const group = await Group.findByPk(groupId)
-    if (!group) {
-        return res.status(404).json({ "message": "Group couldn't be found" })
-    }
+
 
     const venues = await Venue.findAll({
         where: {
@@ -87,6 +90,14 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
 
 
     const groupId = req.params.groupId
+    const group = await Group.findByPk(groupId)
+    if (!group) {
+        return res.status(404).json({ "message": "Group couldn't be found" })
+    }
+
+    const newVenue = Venue.build({
+        groupId, address, city, state, lat, lng
+    });
 
     // Authorization
     const { user } = req
@@ -111,13 +122,7 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
         })
     }
 
-    const group = await Group.findByPk(groupId)
-    if (!group) {
-        return res.status(404).json({ "message": "Group couldn't be found" })
-    }
-    const newVenue = Venue.build({
-        groupId, address, city, state, lat, lng
-    });
+
 
     await newVenue.save()
 
