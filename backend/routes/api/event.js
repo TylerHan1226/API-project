@@ -4,6 +4,7 @@ const { Op, or } = require('sequelize');
 // const bcrypt = require('bcryptjs');
 
 const { requireAuth } = require('../../utils/auth');
+const { validateQuery, handleValidationErrors } = require('../../utils/validation');
 
 const { User, Group, GroupImage, Membership, Venue, Event, Attendance, EventImage } = require('../../db/models');
 
@@ -13,10 +14,25 @@ router.use((req, res, next) => {
 });
 
 
+function validateQueryMiddleware(req, res, next) {
+    const validationError = validateQuery(req.query);
+  
+    if (Object.keys(validationError).length > 0) {
+      const err = {
+        message: "Bad Request",
+        errors: validationError,
+        status: 400,
+        stack: null
+      };
+      
+      return next(err);
+    }
+  
+    next();
+  }
 
 //Get all Events
-router.get('/events', requireAuth, async (req, res) => {
-
+router.get('/events', requireAuth, validateQueryMiddleware, async (req, res) => {
 
     const events = await Event.findAll({
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']

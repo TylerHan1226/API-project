@@ -125,7 +125,10 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
           })
     }
 
-    const userToUpdate = await User.findByPk(memberId)
+    const membership = await Membership.findByPk(memberId)
+    // return res.status(200).json(membership.userId)
+
+    const userToUpdate = await User.findByPk(membership.userId)
     if (!userToUpdate) {
         return res.status(404).json({
             "message": "User couldn't be found"
@@ -142,7 +145,7 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
     }
 
     const membershipToUpdate = await Membership.findOne({
-        where: { groupId: groupId, userId: memberId },
+        where: { groupId: groupId, userId: membership.userId },
         attributes: ['id', 'userId', 'groupId', 'status']
     })
     // => {..}
@@ -195,29 +198,31 @@ router.delete('/groups/:groupId/membership/:memberId', requireAuth, async (req, 
         })
     }
 
-    const userToUpdate = await User.findByPk(memberId)
+    const membership = await Membership.findByPk(memberId)
+
+    const userToUpdate = await User.findByPk(membership.userId)
     if (!userToUpdate) {
         return res.status(404).json({
             "message": "User couldn't be found"
         })
     }
 
-    const membership = await Membership.findOne({
+    const memberships = await Membership.findOne({
         where: {
-            userId: memberId,
+            userId: membership.userId,
             groupId: groupId
         },
         attributes: {exclude: ['createdAt', 'updatedAt']}
     }) 
-    if (!membership) {
+    if (!memberships) {
         return res.status(404).json({
             "message": "Membership between the user and the group does not exist"
         })
     }
 
-    if (membership.userId == user.id || 
+    if (memberships.userId == user.id || 
         group.organizerId == user.id) {
-        await membership.destroy()
+        await memberships.destroy()
         return res.status(200).json({
             "message": "Successfully deleted"
           })
