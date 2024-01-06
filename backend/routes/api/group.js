@@ -284,6 +284,10 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
             preview: newGroupImage.preview
         }
         return res.status(200).json(resultNewGroupImage)
+    } else {
+        return res.status(400).json({
+            "message": "Not Authorized"
+        })
     }
 
 })
@@ -301,9 +305,9 @@ router.put('/:groupId', requireAuth, async (req, res) => {
         where: { id: groupId }
     })
     if (!group) {
-    return res.status(404).json({
-        "message": "Group couldn't be found"
-    })
+        return res.status(404).json({
+            "message": "Group couldn't be found"
+        })
     }
 
     if (group.organizerId === userId) {
@@ -369,7 +373,7 @@ router.delete('/:groupId', requireAuth, async (req, res) => {
 
     if (group.organizerId == userId) {
         const group = await Group.findByPk(groupId)
-        
+
         await group.destroy()
         res.status(200)
         return res.json({ "message": "Successfully deleted" })
