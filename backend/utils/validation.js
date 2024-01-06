@@ -22,25 +22,6 @@ const handleValidationErrors = (req, _res, next) => {
   next();
 };
 
-//Add Query Filters to Get All Events
-const validateQuery = (query) => {
-  let {page, size, name, type, startDate} = query
-  const error = {}
-  
-  page = parseInt(page)
-  size = parseInt(size)
-
-  if (page < 1) error.page = "Page must be greater than or equal to 1"
-  if (size < 1) error.size = "Size must be greater than or equal to 1"
-  if (typeof name !== 'string') error.name = "Name must be a string"
-  if (type !== 'Online' && type !== 'In person') error.name = "Type must be 'Online' or 'In Person'"
-  if (typeof startDate !== 'string' || startDate.length !== 10) error.startDate = "Start date must be a valid date time"
-
-  return error
-}
-
-
 module.exports = {
-  handleValidationErrors,
-  validateQuery
+  handleValidationErrors
 };

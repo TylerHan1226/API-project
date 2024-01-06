@@ -125,6 +125,15 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
           })
     }
 
+    const group = await Group.findByPk(groupId, {
+        attributes: ['organizerId']
+    })
+    if (!group) {
+        return res.status(404).json({
+            "message": "Group couldn't be found"
+        })
+    }
+
     const membership = await Membership.findByPk(memberId)
     // return res.status(200).json(membership.userId)
 
@@ -135,14 +144,7 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
         })
     }
 
-    const group = await Group.findByPk(groupId, {
-        attributes: ['organizerId']
-    })
-    if (!group) {
-        return res.status(404).json({
-            "message": "Group couldn't be found"
-        })
-    }
+
 
     const membershipToUpdate = await Membership.findOne({
         where: { groupId: groupId, userId: membership.userId },

@@ -4,7 +4,7 @@ const { Op, or } = require('sequelize');
 // const bcrypt = require('bcryptjs');
 
 const { requireAuth } = require('../../utils/auth');
-const { validateQuery, handleValidationErrors } = require('../../utils/validation');
+const { handleValidationErrors } = require('../../utils/validation');
 
 const { User, Group, GroupImage, Membership, Venue, Event, Attendance, EventImage } = require('../../db/models');
 
@@ -14,10 +14,22 @@ router.use((req, res, next) => {
 });
 
 
-function validateQueryMiddleware(req, res, next) {
-    const validationError = validateQuery(req.query);
+//Get all Events
+router.get('/events', requireAuth, async (req, res) => {
 
-    if (Object.keys(validationError).length > 0) {
+    let {page, size, name, type, startDate} = query
+    const error = {}
+
+    page = parseInt(page)
+    size = parseInt(size)
+  
+    if (page < 1) error.page = "Page must be greater than or equal to 1"
+    if (size < 1) error.size = "Size must be greater than or equal to 1"
+    if (typeof name !== 'string') error.name = "Name must be a string"
+    if (type !== 'Online' && type !== 'In person') error.name = "Type must be 'Online' or 'In Person'"
+    if (startDate) error.startDate = "Start date must be a valid date time"
+  
+    if (error.length > 0) {
         const err = {
             message: "Bad Request",
             errors: validationError,
@@ -25,14 +37,8 @@ function validateQueryMiddleware(req, res, next) {
             stack: null
         };
 
-        return next(err);
+        return res.status(400).json(error);
     }
-
-    next();
-}
-
-//Get all Events
-router.get('/events', requireAuth, validateQueryMiddleware, async (req, res) => {
 
     const events = await Event.findAll({
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
