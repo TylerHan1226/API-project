@@ -49,7 +49,17 @@ router.get('/groups/:groupId/members', requireAuth, async (req, res) => {
                 eachUser.setDataValue('Membership', { status: matchingMembership.status })
             }
         })
-        return res.status(200).json({ Members: users })
+        const resultUsersArr = users
+        const userObj = {
+            id: user.id,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            Membership: {
+                status: "host"
+            }
+        }
+        users.push(userObj)
+        return res.status(200).json({ Members: resultUsersArr })
     } else {
         const resultUsers = []
         users.forEach((eachUser) => {
