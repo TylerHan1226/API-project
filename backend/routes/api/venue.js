@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { Op, or } = require('sequelize');
+const { Op, or, json } = require('sequelize');
 
 
 const { requireAuth } = require('../../utils/auth');
@@ -64,7 +64,10 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         },
         attributes: ['id', 'groupId', 'address', 'city', 'state', 'lat', 'lng']
     })
+
+    
     res.status(200)
+
     return res.json({ 'Venues': venues })
 })
 
@@ -104,15 +107,16 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
 
-    const newVenue = Venue.build({
-        groupId, address, city, state, lat, lng
-    });
+
 
     // Authorization
     const { user } = req
     if (group.organizerId == user.id) {
+        
+        const newVenue = Venue.build({
+            groupId, address, city, state, lat, lng
+        });
         await newVenue.save()
-
         const responseVenue = {
             id: newVenue.id,
             groupId: newVenue.groupId,
