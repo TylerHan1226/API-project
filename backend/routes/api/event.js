@@ -115,7 +115,8 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
         },
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
     })
-    if (!events) {
+    const group = await Group.findByPk(groupId)
+    if (!group) {
         return res.status(404).json({
             "message": "Group couldn't be found"
           })
@@ -379,6 +380,20 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
         return res.status(404).json({ "message": "Event couldn't be found" })
     }
     const groupId = event.groupId
+    const group = await Group.findByPk(groupId)
+    if (group.organizerId == user.id) {
+        const newEventImage = EventImage.build({
+            eventId, url, preview
+        })
+        await newEventImage.save()
+
+        const resultNewEventImage = {
+            id: newEventImage.id,
+            url: newEventImage.url,
+            preview: newEventImage.preview
+        }
+        return res.status(200).json(resultNewEventImage)
+    }
 
     // Authorization
     const memberships = await Membership.findAll({
