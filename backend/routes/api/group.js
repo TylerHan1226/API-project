@@ -159,7 +159,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
         // => [{"id":..., "url":..., "preview":...}]
 
         //get organizer
-        const organizer = await User.findAll({
+        const organizer = await User.findOne({
             where: { id: groups.organizerId },
             attributes: ["id", "firstName", "lastName"]
         });
@@ -172,8 +172,7 @@ router.get('/:groupId', requireAuth, async (req, res) => {
             },
             attributes: ["id", "groupId", "address", "city", "state", "lat", "lng"]
         });
-        // const venuesJson = venues.toJSON()
-        // console.log("venues (json) ===> ", venuesJson)
+
         const resultGroup = {
             id: groups.id,
             organizerId: groups.organizerId,

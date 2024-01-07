@@ -16,29 +16,31 @@ router.use((req, res, next) => {
 
 //Get all Events
 router.get('/events', requireAuth, async (req, res) => {
+    if (res.query) {
+        let { page, size, name, type, startDate } = res.query
+        const error = {}
 
-    let {page, size, name, type, startDate} = query
-    const error = {}
+        page = parseInt(page)
+        size = parseInt(size)
 
-    page = parseInt(page)
-    size = parseInt(size)
-  
-    if (page < 1) error.page = "Page must be greater than or equal to 1"
-    if (size < 1) error.size = "Size must be greater than or equal to 1"
-    if (typeof name !== 'string') error.name = "Name must be a string"
-    if (type !== 'Online' && type !== 'In person') error.name = "Type must be 'Online' or 'In Person'"
-    if (startDate) error.startDate = "Start date must be a valid date time"
-  
-    if (error.length > 0) {
-        const err = {
-            message: "Bad Request",
-            errors: validationError,
-            status: 400,
-            stack: null
-        };
+        if (page < 1) error.page = "Page must be greater than or equal to 1"
+        if (size < 1) error.size = "Size must be greater than or equal to 1"
+        if (typeof name !== 'string') error.name = "Name must be a string"
+        if (type !== 'Online' && type !== 'In person') error.name = "Type must be 'Online' or 'In Person'"
+        if (startDate) error.startDate = "Start date must be a valid date time"
 
-        return res.status(400).json(error);
+        if (error.length > 0) {
+            const error = {
+                message: "Bad Request",
+                errors: validationError,
+                status: 400,
+                stack: null
+            };
+
+            return res.status(400).json(error);
+        }
     }
+
 
     const events = await Event.findAll({
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
@@ -246,38 +248,6 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
     const { venueId, name, type, capacity, price, description, startDate, endDate } = req.body
     const groupId = req.params.groupId
 
-    // Authorization
-    const { user } = req
-    const memberships = await Membership.findAll({
-        where: { groupId: groupId }
-    })
-    let membershipIndex
-    for (let eachMembership of memberships) {
-        if (eachMembership.userId == user.id) {
-            membershipIndex = memberships.indexOf(eachMembership)
-        }
-    }
-    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
-            "message": "Not Authorized"
-        })
-    }
-    if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
-            "message": "Not Authorized"
-        })
-    }
-
-    //validate venue/group
-    const venue = await Venue.findByPk(venueId)
-    if (!venue) {
-        return res.status(404).json({ "message": "Venue couldn't be found" })
-    }
-    const group = await Venue.findByPk(groupId)
-    if (!group) {
-        return res.status(404).json({ "message": "Group couldn't be found" })
-    }
-
     const validationErrorsObj = {}
     const currentDate = new Date();
     if (!name || name.length < 5) {
@@ -308,6 +278,65 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
         });
     }
 
+
+    //validate venue/group
+    const venue = await Venue.findByPk(venueId)
+    if (!venue) {
+        return res.status(404).json({ "message": "Venue couldn't be found" })
+    }
+    const group = await Group.findByPk(groupId)
+    if (!group) {
+        return res.status(404).json({ "message": "Group couldn't be found" })
+    }
+    // return res.json(group)
+    const { user } = req
+    if (group.organizerId == user.id) {
+        //build
+        const newEvent = Event.build({
+            venueId, groupId, name, type, capacity, price, description, startDate, endDate
+        })
+
+        await newEvent.save()
+
+        const resultEvent = {
+            id: newEvent.id,
+            groupId: newEvent.groupId,
+            venueId: newEvent.venueId,
+            name: newEvent.name,
+            type: newEvent.type,
+            capacity: newEvent.capacity,
+            price: newEvent.price,
+            description: newEvent.description,
+            startDate: newEvent.startDate,
+            endDate: newEvent.endDate
+        }
+
+        return res.status(200).json(resultEvent)
+    }
+
+    // Authorization
+
+    const memberships = await Membership.findAll({
+        where: { groupId: groupId }
+    })
+    let membershipIndex
+    for (let eachMembership of memberships) {
+        if (eachMembership.userId == user.id) {
+            membershipIndex = memberships.indexOf(eachMembership)
+        }
+    }
+    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
+        return res.status(400).json({
+            "message": "Not Authorized"
+        })
+    }
+    if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
+        return res.status(400).json({
+            "message": "Not Authorized"
+        })
+    }
+
+    //build
     const newEvent = Event.build({
         venueId, groupId, name, type, capacity, price, description, startDate, endDate
     })

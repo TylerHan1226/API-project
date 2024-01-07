@@ -36,7 +36,7 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
     }
 
     // Authorization
-    
+
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
@@ -110,7 +110,7 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
 
     // Authorization
     const { user } = req
-    if(group.organizerId == user.id){
+    if (group.organizerId == user.id) {
         await newVenue.save()
 
         const responseVenue = {
@@ -122,7 +122,7 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
             lat: newVenue.lat,
             lng: newVenue.lng,
         };
-    
+
         res.status(200)
         return res.json(responseVenue)
     }
@@ -202,16 +202,39 @@ router.put('/venues/:venueId', requireAuth, async (req, res) => {
         });
     }
 
-    
+
     const venueId = req.params.venueId
     const venue = await Venue.findByPk(venueId)
     if (!venue) {
-        return res.json({ "message": "Venue couldn't be found" })
+        return res.status(404).json({ "message": "Venue couldn't be found" })
     }
     const groupId = venue.groupId
+    const { user } = req
+    const group = await Group.findByPk(groupId)
+    if (group.organizerId == user.id) {
+        //build/edit
+        venue.address = address
+        venue.city = city
+        venue.state = state
+        venue.lat = lat
+        venue.lng = lng
+
+        const responseVenue = {
+            id: venue.id,
+            groupId: venue.groupId,
+            address: venue.address,
+            city: venue.city,
+            state: venue.state,
+            lat: venue.lat,
+            lng: venue.lng,
+        };
+
+        await venue.save()
+        return res.status(200).json(responseVenue)
+    }
 
     // Authorization
-    const { user } = req
+
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
@@ -231,7 +254,7 @@ router.put('/venues/:venueId', requireAuth, async (req, res) => {
             "message": "Not Authorized"
         })
     }
-    
+
     //build/edit
     venue.address = address
     venue.city = city
