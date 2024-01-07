@@ -115,6 +115,11 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
         },
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
     })
+    if (!events) {
+        return res.status(404).json({
+            "message": "Group couldn't be found"
+          })
+    }
 
     const eventIds = await Event.findAll({
         attributes: ['id']
