@@ -84,6 +84,13 @@ router.get('/current', requireAuth, async (req, res) => {
     })
     // => [{}, {}, ...] groups are selected
 
+    const groupWithCurAsOrganizer = await Group.findAll({
+        where: {organizerId: user.id}
+    })
+    if (groupWithCurAsOrganizer) {
+        groups.push(...groupWithCurAsOrganizer)
+    }
+
     const members = await Membership.findAll({
         where: { groupId: groupIdsArr },
         // attributes: [preview]
@@ -246,33 +253,13 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
     const { url, preview } = req.body
     const groupId = req.params.groupId
 
-    // // Authorization
-    // const memberships = await Membership.findAll({
-    //     where: { groupId: groupId }
-    // })
-    // let membershipIndex
-    // for (let eachMembership of memberships) {
-    //     if (eachMembership.userId == user.id) {
-    //         membershipIndex = memberships.indexOf(eachMembership)
-    //     }
-    // }
-    // if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-    //     return res.status(400).json({
-    //         "message": "Not Authorized"
-    //     })
-    // }
-    // if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-    //     return res.status(400).json({
-    //         "message": "Not Authorized"
-    //     })
-    // }
 
     const group = await Group.findByPk(groupId)
     if (!group) {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
 
-    if (groupId == userId) {
+    if (group.organizerId == userId) {
         const newGroupImage = GroupImage.build({
             groupId, url, preview
         })

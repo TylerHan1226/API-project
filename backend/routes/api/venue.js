@@ -16,7 +16,7 @@ router.use((req, res, next) => {
 
 //Get All Venues for a Group specified by its id
 router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
-
+    const { user } = req
     const groupId = req.params.groupId
 
     const group = await Group.findByPk(groupId)
@@ -24,8 +24,19 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
 
+    if (group.organizerId == user.id) {
+        const venues = await Venue.findAll({
+            where: {
+                groupId: groupId
+            },
+            attributes: ['id', 'groupId', 'address', 'city', 'state', 'lat', 'lng']
+        })
+        res.status(200)
+        return res.json({ 'Venues': venues })
+    }
+
     // Authorization
-    const { user } = req
+    
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
@@ -46,8 +57,6 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
             "message": "Not Authorized"
         })
     }
-
-
 
     const venues = await Venue.findAll({
         where: {
@@ -101,10 +110,27 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
 
     // Authorization
     const { user } = req
+    if(group.organizerId == user.id){
+        await newVenue.save()
+
+        const responseVenue = {
+            id: newVenue.id,
+            groupId: newVenue.groupId,
+            address: newVenue.address,
+            city: newVenue.city,
+            state: newVenue.state,
+            lat: newVenue.lat,
+            lng: newVenue.lng,
+        };
+    
+        res.status(200)
+        return res.json(responseVenue)
+    }
+
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
-    // return res.status(200).json(memberships)
+
     let membershipIndex
     for (let eachMembership of memberships) {
         if (eachMembership.userId == user.id) {
@@ -121,8 +147,6 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
             "message": "Not Authorized"
         })
     }
-
-
 
     await newVenue.save()
 
