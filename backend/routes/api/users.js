@@ -71,7 +71,7 @@ router.post('/', validateSignup, async (req, res) => {
         errObj.push(eachError.errors.message)
       }
     }
-    const result = {message: err.message, errors: errObj[0].message}
+    const result = {message: err.message, errors: err[0].message}
     return res.status(400).json(result)
   }
 });
