@@ -65,10 +65,7 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         attributes: ['id', 'groupId', 'address', 'city', 'state', 'lat', 'lng']
     })
 
-    
-    res.status(200)
-
-    return res.json({ 'Venues': venues })
+    return res.status(200).json({ 'Venues': venues })
 })
 
 
@@ -106,8 +103,6 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
     if (!group) {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
-
-
 
     // Authorization
     const { user } = req
@@ -151,7 +146,9 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
             "message": "Not Authorized"
         })
     }
-
+    const newVenue = Venue.build({
+        groupId, address, city, state, lat, lng
+    });
     await newVenue.save()
 
     const responseVenue = {

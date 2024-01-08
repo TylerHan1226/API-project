@@ -49,17 +49,8 @@ router.get('/groups/:groupId/members', requireAuth, async (req, res) => {
                 eachUser.setDataValue('Membership', { status: matchingMembership.status })
             }
         })
-        const resultUsersArr = users
-        const userObj = {
-            id: user.id,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            Membership: {
-                status: "host"
-            }
-        }
-        users.push(userObj)
-        return res.status(200).json({ Members: resultUsersArr })
+
+        return res.status(200).json({ Members: users })
     } else {
         const resultUsers = []
         users.forEach((eachUser) => {
@@ -70,6 +61,7 @@ router.get('/groups/:groupId/members', requireAuth, async (req, res) => {
                 resultUsers.push(eachUser.toJSON());
             }
         })
+
         return res.status(200).json({ Members: resultUsers })
     }
 })
@@ -175,14 +167,20 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
     if (membershipToUpdate.status == 'pending' && status == 'member') {
         if (user.id == group.organizerId) {
             membershipToUpdate.status = status
+        } else {
+            return res.status(200).json({
+                'message': 'Not Authorized'
+            })
         }
     }
     if (membershipToUpdate.status == 'member' && status == 'co-host') {
-        if (user.id == group.organizerId) {
+        if (membership.status == 'host') {
             membershipToUpdate.status = status
+        } else {
+            return res.status(200).json({
+                'message': 'Not Authorized'
+            })
         }
-    } else {
-        membershipToUpdate.status = status
     }
 
     const resultMembership = {

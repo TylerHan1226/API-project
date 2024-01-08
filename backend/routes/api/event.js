@@ -119,7 +119,7 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
     if (!group) {
         return res.status(404).json({
             "message": "Group couldn't be found"
-          })
+        })
     }
 
     const eventIds = await Event.findAll({
@@ -188,10 +188,6 @@ router.get('/groups/:groupId/events', requireAuth, async (req, res) => {
         }
     }
     return res.status(200).json({ 'Events': resultEvents })
-
-
-
-
 
 })
 
@@ -493,9 +489,47 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
             message: "Event couldn't be found"
         })
     }
+    const venuesIds = await Venue.findAll({
+        attributes: ['id']
+    })
+    // => [{id: 1}, {id: 2}, ...]
+    const venueIdArr = venuesIds.map(ele => ele.id)
+    if (!venueIdArr.includes(venueId)) {
+        return res.status(404).json({
+            message: "Venue couldn't be found"
+        })
+    }
+
+    const { user } = req
+    const group = await Group.findByPk(event.groupId)
+    if (group.organizerId == user.id) {
+        event.venueId = venueId
+        event.name = name
+        event.type = type
+        event.capacity = capacity
+        event.price = price
+        event.description = description
+        event.startDate = startDate
+        event.endDate = endDate
+
+        const resultEvent = {
+            id: event.id,
+            groupId: event.groupId,
+            venueId: event.venueId,
+            name: event.name,
+            type: event.type,
+            capacity: event.capacity,
+            price: event.price,
+            description: event.description,
+            startDate: event.startDate,
+            endDate: event.endDate
+        }
+
+        return res.status(200).json(resultEvent)
+    }
 
     // Authorization
-    const { user } = req
+
     const groupId = event.groupId
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
@@ -517,16 +551,7 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
         })
     }
 
-    const venuesIds = await Venue.findAll({
-        attributes: ['id']
-    })
-    // => [{id: 1}, {id: 2}, ...]
-    const venueIdArr = venuesIds.map(ele => ele.id)
-    if (!venueIdArr.includes(venueId)) {
-        return res.status(404).json({
-            message: "Venue couldn't be found"
-        })
-    }
+
     event.venueId = venueId
     event.name = name
     event.type = type
