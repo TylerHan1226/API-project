@@ -26,10 +26,18 @@ router.get('/events', requireAuth, async (req, res) => {
         const currentTime = new Date().getTime();
         if (!page || page < 1) errorObj.page = "Page must be greater than or equal to 1"
         if (!size || size < 1) errorObj.size = "Size must be greater than or equal to 1"
-        if (typeof name !== 'string') errorObj.name = "Name must be a string"
-        if (type !== 'Online' && type !== 'In person') errorObj.type = "Type must be 'Online' or 'In Person'"
-        const startDateObj = new Date(startDate);
-        if (startDate && startDateObj < currentTime) errorObj.startDate = "Start date must be a valid date time"
+        if (name) {
+            if (typeof name !== 'string') errorObj.name = "Name must be a string"
+        }
+        // return res.json(!type)    
+        if (type) {
+            if (type !== 'Online' && type !== 'In person') errorObj.type = "Type must be 'Online' or 'In Person'"
+        }
+        if (startDate) {
+            const startDateObj = new Date(startDate);
+            if (startDate && startDateObj < currentTime) errorObj.startDate = "Start date must be a valid date time"
+        }
+        
 
         if (Object.keys(errorObj).length) {
             const validationError = {
@@ -38,11 +46,96 @@ router.get('/events', requireAuth, async (req, res) => {
                 status: 400,
                 stack: null
             };
-
             return res.status(400).json(validationError)
+        }
+    
+
+    const pagination = {}
+    pagination.limit = size
+    pagination.offset = size * (page -1)
+
+    const queryObj = {
+        where: {}
+    }
+    if (name) {
+        queryObj.where.name = {
+            [Op.substring]: name
+        }
+    }
+    if (type) {
+        queryObj.where.type = {
+            [Op.substring]: type
+        }
+    }
+    if (startDate) {
+        queryObj.where.type = {
+            [Op.substring]: startDate
         }
     }
 
+    const events = await Event.findAll({
+        attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate'],
+        ...queryObj,
+        ...pagination
+    })
+
+    const eventIds = await Event.findAll({
+        attributes: ['id']
+    })
+    const eventIdsArr = eventIds.map(element => element.id);
+    // => [1, 2, 3, 4, 5]
+
+    const attendances = await Attendance.findAll()
+    const numAttending = [];
+    for (const eachId of eventIdsArr) {
+        const attArr = attendances.filter(ele => ele.eventId === eachId);
+        numAttending.push(attArr.length);
+    }
+    // => [3, 5, 3, 4, 3]
+
+    const eventImages = await EventImage.findAll({
+        where: { eventId: eventIdsArr, preview: true },
+        attributes: ["url"]
+    })
+    //=> [{url: }, {url: }, ...]
+
+    const groups = await Group.findAll({
+        attributes: ['id', 'name', 'city', 'state']
+    })
+
+    let resultEvents = events
+    .filter(event => eventIdsArr.includes(event.id))
+    .map((eachEvent, eventIndex) => ({
+        id: eachEvent.id,
+        groupId: eachEvent.groupId,
+        venueId: eachEvent.venueId,
+        name: eachEvent.name,
+        type: eachEvent.type,
+        startDate: eachEvent.startDate,
+        endDate: eachEvent.endDate,
+        numAttending: numAttending[eventIndex],
+        previewImage: eventImages[eventIndex].url
+    }))
+
+    for (let eachGroup of groups) {
+        for (let eachResultEvent of resultEvents) {
+            if (eachGroup.id == eachResultEvent.id) {
+                eachResultEvent.Group = eachGroup
+            }
+        }
+    }
+    const venues = await Venue.findAll({
+        attributes: ['id', 'city', 'state']
+    })
+    for (let eachVenue of venues) {
+        for (let eachResultEvent of resultEvents) {
+            if (eachVenue.id == eachResultEvent.id) {
+                eachResultEvent.Venue = eachVenue
+            }
+        }
+    }
+    return res.status(200).json({ 'Events': resultEvents })
+}
     const events = await Event.findAll({
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
     })
@@ -103,6 +196,7 @@ router.get('/events', requireAuth, async (req, res) => {
             }
         }
     }
+
     return res.status(200).json({ 'Events': resultEvents })
 })
 
@@ -411,10 +505,10 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
     const attendeesIdArr = attendances.map(ele => ele.userId)
     //  => [1, 4, 6]
     const membership = await Membership.findOne({
-        where: {userId: user.id}
+        where: {userId: user.id, status: ['host', 'co-host']}
     })
 
-    if (!membership || membership.status == 'pending') {
+    if (!membership) {
         return res.status(403).json({
             'message': 'Not Authorized'
         })
