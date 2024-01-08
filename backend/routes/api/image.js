@@ -49,7 +49,7 @@ router.delete('/group-images/:imageId', requireAuth, async (req, res) => {
         })
     }  
      else {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Can not delete image"
         })
     }
@@ -84,7 +84,7 @@ router.delete('/event-images/:imageId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }

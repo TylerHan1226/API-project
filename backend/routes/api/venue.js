@@ -23,7 +23,7 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
     if (!group) {
         return res.status(404).json({ "message": "Group couldn't be found" })
     }
-
+    // return res.json(group)
     if (group.organizerId == user.id) {
         const venues = await Venue.findAll({
             where: {
@@ -48,7 +48,7 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -129,6 +129,7 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
+    // return res.status(200).json(memberships)
 
     let membershipIndex
     for (let eachMembership of memberships) {
@@ -137,12 +138,12 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -246,12 +247,12 @@ router.put('/venues/:venueId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }

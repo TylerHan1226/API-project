@@ -16,7 +16,7 @@ router.use((req, res, next) => {
 });
 
 //Get all Groups
-router.get('/', requireAuth, async (req, res) => {
+router.get('/', async (req, res) => {
     const groups = await Group.findAll()
     const members = await Membership.findAll()
     const groupIds = await Group.findAll({
@@ -27,7 +27,10 @@ router.get('/', requireAuth, async (req, res) => {
     const numMembersArr = [];
     for (const eachId of groupIdsArr) {
         const groupsArr = members.filter(ele => ele.groupId === eachId);
-        numMembersArr.push(groupsArr.length);
+        if (groupsArr.length === 0) {
+            numMembersArr.push(1)
+        }
+        numMembersArr.push(groupsArr.length)
     }
     // => [3,2,3,3,2]
 
@@ -95,10 +98,14 @@ router.get('/current', requireAuth, async (req, res) => {
         where: { groupId: groupIdsArr },
         // attributes: [preview]
     })
+    // return res.json(members)
 
     const numMembersArr = [];
     for (const eachId of groupIdsArr) {
         const groupsArr = members.filter(ele => ele.groupId === eachId);
+        if (groupsArr.length === 0) {
+            numMembersArr.push(1)
+        }
         numMembersArr.push(groupsArr.length)
     }
     //=> [3, 3, 3, 2]
@@ -139,7 +146,7 @@ router.get('/current', requireAuth, async (req, res) => {
 
 
 // Get details of a Group from an id
-router.get('/:groupId', requireAuth, async (req, res) => {
+router.get('/:groupId', async (req, res) => {
     try {
         const id = req.params.groupId
         const groups = await Group.findByPk(id);
@@ -148,8 +155,11 @@ router.get('/:groupId', requireAuth, async (req, res) => {
         const members = await Membership.findAll({
             where: { groupId: id }
         })
-        const numMembers = members.length;
+        let numMembers = 1
         // => 3
+        if (groups || members.length > 0) {
+            numMembers = members.length
+        }
 
         //get groupImages
         const groupImages = await GroupImage.findAll({
@@ -271,7 +281,7 @@ router.post('/:groupId/images', requireAuth, async (req, res) => {
         }
         return res.status(200).json(resultNewGroupImage)
     } else {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -337,7 +347,7 @@ router.put('/:groupId', requireAuth, async (req, res) => {
         res.status(200)
         return res.json(group)
     } else {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Group must belong to the current user"
         })
     }
@@ -364,7 +374,7 @@ router.delete('/:groupId', requireAuth, async (req, res) => {
         res.status(200)
         return res.json({ "message": "Successfully deleted" })
     } else {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Group must belong to the current user"
         })
     }

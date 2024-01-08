@@ -328,12 +328,12 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -402,12 +402,12 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -541,12 +541,12 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
@@ -601,12 +601,12 @@ router.delete('/events/:eventId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(401).json({
             "message": "Not Authorized"
         })
     }

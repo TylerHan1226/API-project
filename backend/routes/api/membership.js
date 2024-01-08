@@ -138,21 +138,21 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
 
     const membership = await Membership.findByPk(memberId)
     // return res.status(200).json(membership.userId)
-
+    // => 14
     const userToUpdate = await User.findByPk(membership.userId)
     if (!userToUpdate) {
         return res.status(404).json({
             "message": "User couldn't be found"
         })
     }
-
-
-
     const membershipToUpdate = await Membership.findOne({
         where: { groupId: groupId, userId: membership.userId },
         attributes: ['id', 'userId', 'groupId', 'status']
     })
     // => {..}
+    // return res.status(200).json(membershipToUpdate)
+    //=> {id: userId: ...}
+
     if (!membershipToUpdate) {
         return res.status(404).json({
             "message": "Membership between the user and the group does not exist"
@@ -167,30 +167,36 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
     if (membershipToUpdate.status == 'pending' && status == 'member') {
         if (user.id == group.organizerId) {
             membershipToUpdate.status = status
-        } else {
-            return res.status(200).json({
-                'message': 'Not Authorized'
-            })
+            const resultMembership = {
+                id: membershipToUpdate.id,
+                groupId: membershipToUpdate.groupId,
+                memberId: membershipToUpdate.userId,
+                status: membershipToUpdate.status
+            }
+            return res.status(200).json(resultMembership)
         }
     }
-    if (membershipToUpdate.status == 'member' && status == 'co-host') {
-        if (membership.status == 'host') {
+    if ((membershipToUpdate.status == 'member' || membershipToUpdate.status == 'pending') && status == 'co-host') {
+        if (membership.status == 'host' || user.id == group.organizerId) {
             membershipToUpdate.status = status
-        } else {
-            return res.status(200).json({
-                'message': 'Not Authorized'
-            })
+            await membershipToUpdate.save()
+            const resultMembership = {
+                id: membershipToUpdate.id,
+                groupId: membershipToUpdate.groupId,
+                memberId: membershipToUpdate.userId,
+                status: membershipToUpdate.status
+            }
+            return res.status(200).json(resultMembership)
         }
     }
+    
 
-    const resultMembership = {
-        id: membershipToUpdate.id,
-        groupId: membershipToUpdate.groupId,
-        memberId: membershipToUpdate.userId,
-        status: membershipToUpdate.status
-    }
+        return res.status(401).json({
+            'message': 'Not Authorized'
+        })
 
-    return res.status(200).json(resultMembership)
+
+
 })
 
 //Delete membership to a group specified by id
@@ -238,7 +244,7 @@ router.delete('/groups/:groupId/membership/:memberId', requireAuth, async (req, 
           })
     }
     
-    return res.status(400).json({
+    return res.status(401).json({
         "message": "Not allowed to delete membership"
       })
 })
