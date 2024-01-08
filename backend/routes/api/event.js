@@ -16,31 +16,32 @@ router.use((req, res, next) => {
 
 //Get all Events
 router.get('/events', requireAuth, async (req, res) => {
-    if (res.query) {
-        let { page, size, name, type, startDate } = res.query
-        const error = {}
+    if (req.query) {
+        let { page, size, name, type, startDate } = req.query;
+        const errorObj = {}
 
         page = parseInt(page)
         size = parseInt(size)
 
-        if (page < 1) error.page = "Page must be greater than or equal to 1"
-        if (size < 1) error.size = "Size must be greater than or equal to 1"
-        if (typeof name !== 'string') error.name = "Name must be a string"
-        if (type !== 'Online' && type !== 'In person') error.name = "Type must be 'Online' or 'In Person'"
-        if (startDate) error.startDate = "Start date must be a valid date time"
+        const currentTime = new Date().getTime();
+        if (!page || page < 1) errorObj.page = "Page must be greater than or equal to 1"
+        if (!size || size < 1) errorObj.size = "Size must be greater than or equal to 1"
+        if (typeof name !== 'string') errorObj.name = "Name must be a string"
+        if (type !== 'Online' && type !== 'In person') errorObj.type = "Type must be 'Online' or 'In Person'"
+        const startDateObj = new Date(startDate);
+        if (startDate && startDateObj < currentTime) errorObj.startDate = "Start date must be a valid date time"
 
-        if (error.length > 0) {
-            const error = {
+        if (Object.keys(errorObj).length) {
+            const validationError = {
                 message: "Bad Request",
-                errors: validationError,
+                errors: errorObj,
                 status: 400,
                 stack: null
             };
 
-            return res.status(400).json(error);
+            return res.status(400).json(validationError)
         }
     }
-
 
     const events = await Event.findAll({
         attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
@@ -70,7 +71,9 @@ router.get('/events', requireAuth, async (req, res) => {
         attributes: ['id', 'name', 'city', 'state']
     })
 
-    let resultEvents = events.map((eachEvent, eventIndex) => ({
+    let resultEvents = events
+    .filter(event => eventIdsArr.includes(event.id))
+    .map((eachEvent, eventIndex) => ({
         id: eachEvent.id,
         groupId: eachEvent.groupId,
         venueId: eachEvent.venueId,
@@ -78,7 +81,7 @@ router.get('/events', requireAuth, async (req, res) => {
         type: eachEvent.type,
         startDate: eachEvent.startDate,
         endDate: eachEvent.endDate,
-        numMembers: numAttending[eventIndex],
+        numAttending: numAttending[eventIndex],
         previewImage: eventImages[eventIndex].url
     }))
 
@@ -223,6 +226,12 @@ router.get('/events/:eventId', requireAuth, async (req, res) => {
         attributes: ['id', 'url', 'preview']
     })
 
+
+    const memberships = await Membership.findAll({
+        where: {groupId: events.groupId}
+    })
+    const numMembers = memberships.length
+
     const resultEvent = {
         id: events.id,
         groupId: events.groupId,
@@ -234,6 +243,7 @@ router.get('/events/:eventId', requireAuth, async (req, res) => {
         price: events.price,
         startDate: events.startDate,
         endDate: events.endDate,
+        numAttending: numMembers,
         Group: group,
         Venue: venue,
         EventImages: eventImages
@@ -258,19 +268,21 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
     if (!type || !['Online', 'In person'].includes(type)) {
         validationErrorsObj.type = 'Type must be Online or In person';
     }
-    if (!Number.isInteger(capacity)) {
+    if (!capacity|| !Number.isInteger(capacity)) {
         validationErrorsObj.capacity = 'Capacity must be an integer';
     }
-    if (!typeof price === 'number' || price < 0) {
+    if (!price || !typeof price === 'number' || price < 0) {
         validationErrorsObj.price = 'Price is invalid';
     }
     if (!description) {
         validationErrorsObj.description = 'Description is required';
     }
-    if (startDate < currentDate) {
+    const startDateObj = new Date(startDate);
+    if (!startDate || startDateObj <= currentDate) {
         validationErrorsObj.startDate = 'Start date must be in the future';
     }
-    if (endDate < startDate) {
+    const endDateObj = new Date(endDate);
+    if (!endDate || endDateObj < startDateObj) {
         validationErrorsObj.endDate = 'End date is less than start date';
     }
     if (Object.keys(validationErrorsObj).length > 0) {
@@ -328,12 +340,12 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
@@ -391,28 +403,6 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
         return res.status(200).json(resultNewEventImage)
     }
 
-    // Authorization
-    const memberships = await Membership.findAll({
-        where: { groupId: groupId }
-    })
-    let membershipIndex
-    for (let eachMembership of memberships) {
-        if (eachMembership.userId == user.id) {
-            membershipIndex = memberships.indexOf(eachMembership)
-        }
-    }
-    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
-            "message": "Not Authorized"
-        })
-    }
-    if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
-            "message": "Not Authorized"
-        })
-    }
-
-
     const attendances = await Attendance.findAll({
         where: { eventId: eventId },
         attributes: ['userId']
@@ -420,7 +410,15 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
     // => [{'userId': }, {}, ...]
     const attendeesIdArr = attendances.map(ele => ele.userId)
     //  => [1, 4, 6]
+    const membership = await Membership.findOne({
+        where: {userId: user.id}
+    })
 
+    if (!membership || membership.status == 'pending') {
+        return res.status(403).json({
+            'message': 'Not Authorized'
+        })
+    }
     const members = await Membership.findAll({
         where: { groupId: groupId },
         attributes: ['userId']
@@ -443,6 +441,10 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
         }
         return res.status(200).json(resultNewEventImage)
     }
+    return res.status(403).json({
+        "message": "Not Authorized"
+    })
+ 
 })
 
 
@@ -469,10 +471,12 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
     if (!description) {
         validationErrorsObj.description = 'Description is required';
     }
-    if (startDate < currentDate) {
+    const startDateObj = new Date(startDate);
+    if (!startDate || startDateObj <= currentDate) {
         validationErrorsObj.startDate = 'Start date must be in the future';
     }
-    if (endDate < startDate) {
+    const endDateObj = new Date(endDate);
+    if (!endDate || endDateObj < startDateObj) {
         validationErrorsObj.endDate = 'End date is less than start date';
     }
     if (Object.keys(validationErrorsObj).length > 0) {
@@ -511,7 +515,7 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
         event.description = description
         event.startDate = startDate
         event.endDate = endDate
-
+        event.save()
         const resultEvent = {
             id: event.id,
             groupId: event.groupId,
@@ -541,12 +545,12 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
@@ -560,7 +564,7 @@ router.put('/events/:eventId', requireAuth, async (req, res) => {
     event.description = description
     event.startDate = startDate
     event.endDate = endDate
-
+    event.save()
     const resultEvent = {
         id: event.id,
         groupId: event.groupId,
@@ -587,10 +591,18 @@ router.delete('/events/:eventId', requireAuth, async (req, res) => {
             message: "Event couldn't be found"
         })
     }
+    
 
     // Authorization
     const { user } = req
     const groupId = event.groupId
+    const group = await Group.findByPk(groupId)
+    if (group.organizerId  == user.id) {
+        await event.destroy()
+        return res.status(200).json({
+        "message": "Successfully deleted"
+    })
+    }
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
     })
@@ -601,12 +613,12 @@ router.delete('/events/:eventId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }

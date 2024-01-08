@@ -136,17 +136,19 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
         })
     }
 
-    const membership = await Membership.findByPk(memberId)
+    const membership = await Membership.findOne({
+        where: {userId: memberId}
+    })
     // return res.status(200).json(membership.userId)
     // => 14
-    const userToUpdate = await User.findByPk(membership.userId)
-    if (!userToUpdate) {
+    if (!membership) {
         return res.status(404).json({
             "message": "User couldn't be found"
         })
     }
+
     const membershipToUpdate = await Membership.findOne({
-        where: { groupId: groupId, userId: membership.userId },
+        where: { groupId: groupId, userId: memberId },
         attributes: ['id', 'userId', 'groupId', 'status']
     })
     // => {..}
@@ -167,6 +169,7 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
     if (membershipToUpdate.status == 'pending' && status == 'member') {
         if (user.id == group.organizerId) {
             membershipToUpdate.status = status
+            await membershipToUpdate.save()
             const resultMembership = {
                 id: membershipToUpdate.id,
                 groupId: membershipToUpdate.groupId,
@@ -189,9 +192,7 @@ router.put('/groups/:groupId/membership', requireAuth, async (req, res) => {
             return res.status(200).json(resultMembership)
         }
     }
-    
-
-        return res.status(401).json({
+        return res.status(403).json({
             'message': 'Not Authorized'
         })
 
@@ -213,40 +214,30 @@ router.delete('/groups/:groupId/membership/:memberId', requireAuth, async (req, 
             "message": "Group couldn't be found"
         })
     }
-
-    const membership = await Membership.findByPk(memberId)
-
-    const userToUpdate = await User.findByPk(membership.userId)
-    if (!userToUpdate) {
-        return res.status(404).json({
-            "message": "User couldn't be found"
-        })
-    }
-
-    const memberships = await Membership.findOne({
-        where: {
-            userId: membership.userId,
-            groupId: groupId
-        },
+    const membership = await Membership.findOne({
+        where: {userId: memberId},
         attributes: {exclude: ['createdAt', 'updatedAt']}
     }) 
-    if (!memberships) {
+    if (!membership) {
         return res.status(404).json({
-            "message": "Membership between the user and the group does not exist"
-        })
-    }
-
-    if (memberships.userId == user.id || 
-        group.organizerId == user.id) {
-        await memberships.destroy()
+                 "message": "Membership between the user and the group does not exist"
+         })
+        }
+    if (!membership.userId || (group.organizerId !== user.id && membership.userId !== user.id)) {
+        return res.status(403).json({
+            "message": "Not allowed to delete membership"
+          })
+    } else if (!group.organizerId) {
+        return res.status(404).json({
+            "message": "User couldn't be found"
+        })     
+    } else {        
+        await membership.destroy()
         return res.status(200).json({
             "message": "Successfully deleted"
-          })
-    }
-    
-    return res.status(401).json({
-        "message": "Not allowed to delete membership"
-      })
+            })  
+
+    }    
 })
 
 

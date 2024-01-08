@@ -25,6 +25,13 @@ router.delete('/group-images/:imageId', requireAuth, async (req, res) => {
             "message": "Group Image couldn't be found"
         })
     }
+    const group = await Group.findByPk(groupImage.groupId)
+    if (user.id == group.organizerId) {
+        await groupImage.destroy()
+        return res.status(200).json({
+            "message": "Successfully deleted"
+        })
+    }
 
     const memberships = await Membership.findAll({
         where: { groupId: groupImage.groupId }
@@ -37,7 +44,7 @@ router.delete('/group-images/:imageId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(400).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
@@ -49,7 +56,7 @@ router.delete('/group-images/:imageId', requireAuth, async (req, res) => {
         })
     }  
      else {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Can not delete image"
         })
     }
@@ -71,6 +78,13 @@ router.delete('/event-images/:imageId', requireAuth, async (req, res) => {
     const event = await Event.findByPk(eventImage.eventId, {
         attributes: ['groupId']
     })
+    const group = await Group.findByPk(event.groupId)
+    if (user.id == group.organizerId) {
+        await eventImage.destroy()
+        return res.status(200).json({
+            "message": "Successfully deleted"
+        })
+    }
 
 
     const memberships = await Membership.findAll({
@@ -84,7 +98,7 @@ router.delete('/event-images/:imageId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
@@ -96,7 +110,7 @@ router.delete('/event-images/:imageId', requireAuth, async (req, res) => {
         })
     }  
      else {
-        return res.status(400).json({
+        return res.status(403).json({
             "message": "Can not delete image"
         })
     }

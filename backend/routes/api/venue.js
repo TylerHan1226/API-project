@@ -48,12 +48,12 @@ router.get('/groups/:groupId/venues', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(400).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
@@ -81,7 +81,7 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
         validationErrorsObj.city = 'City is required'
     }
     if (!state) {
-        validationErrorsObj.city = 'State is required'
+        validationErrorsObj.state = 'State is required'
     }
     if (lat < -90 || lat > 90) {
         validationErrorsObj.lat = 'Latitude must be within -90 and 90'
@@ -106,47 +106,17 @@ router.post('/groups/:groupId/venues', requireAuth, async (req, res) => {
 
     // Authorization
     const { user } = req
-    if (group.organizerId == user.id) {
-        
-        const newVenue = Venue.build({
-            groupId, address, city, state, lat, lng
-        });
-        await newVenue.save()
-        const responseVenue = {
-            id: newVenue.id,
-            groupId: newVenue.groupId,
-            address: newVenue.address,
-            city: newVenue.city,
-            state: newVenue.state,
-            lat: newVenue.lat,
-            lng: newVenue.lng,
-        };
-
-        res.status(200)
-        return res.json(responseVenue)
-    }
-
     const memberships = await Membership.findAll({
-        where: { groupId: groupId }
+        where: { groupId: groupId, status: ['host', 'co-host'] }
     })
-    // return res.status(200).json(memberships)
+    // return res.json(memberships)
+    const membershipsUserIdArr = memberships.map(ele => ele.userId)
+    if (!membershipsUserIdArr.includes(user.id) && group.organizerId !== user.id) {
+        return res.status(403).json({
+            "message": "Not Authorized"
+        })
+    }
 
-    let membershipIndex
-    for (let eachMembership of memberships) {
-        if (eachMembership.userId == user.id) {
-            membershipIndex = memberships.indexOf(eachMembership)
-        }
-    }
-    if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
-            "message": "Not Authorized"
-        })
-    }
-    if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
-            "message": "Not Authorized"
-        })
-    }
     const newVenue = Venue.build({
         groupId, address, city, state, lat, lng
     });
@@ -182,20 +152,13 @@ router.put('/venues/:venueId', requireAuth, async (req, res) => {
         validationErrorsObj.city = 'City is required'
     }
     if (!state) {
-        validationErrorsObj.city = 'State is required'
+        validationErrorsObj.state = 'State is required'
     }
     if (lat < -90 || lat > 90) {
         validationErrorsObj.lat = 'Latitude must be within -90 and 90'
     }
     if (lng < -180 || lng > 180) {
         validationErrorsObj.lng = 'Longitude must be within -180 and 180'
-    }
-    if (Object.keys(validationErrorsObj).length > 0) {
-        res.status(400)
-        return res.json({
-            message: 'Bad Request',
-            errors: validationErrorsObj,
-        })
     }
     if (Object.keys(validationErrorsObj).length > 0) {
         return res.status(400).json({
@@ -247,12 +210,12 @@ router.put('/venues/:venueId', requireAuth, async (req, res) => {
         }
     }
     if (membershipIndex === undefined || isNaN(membershipIndex) || membershipIndex < 0) {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }
     if (memberships[membershipIndex].status !== 'host' && memberships[membershipIndex].status !== 'co-host') {
-        return res.status(401).json({
+        return res.status(403).json({
             "message": "Not Authorized"
         })
     }

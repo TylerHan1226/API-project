@@ -43,26 +43,37 @@ const validateSignup = [
 
 // Sign up
 router.post('/', validateSignup, async (req, res) => {
-  // console.log('Request Body:', req.body);
-  const { firstName, lastName, email, password, username } = req.body;
-  
-  const hashedPassword = bcrypt.hashSync(password);
-  const user = await User.create({ firstName, lastName, email, username, hashedPassword });
+  try {
+    const { firstName, lastName, email, password, username } = req.body;
+    const hashedPassword = bcrypt.hashSync(password);
 
-  const safeUser = {
-    id: user.id,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    email: user.email,
-    username: user.username,
-  };
+    const user = await User.create({ firstName, lastName, email, username, hashedPassword });
 
-  await setTokenCookie(res, safeUser);
+    const safeUser = {
+      id: user.id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      username: user.username,
+    };
 
-  return res.json({
-    user: safeUser
-  });
-}
-);
+    await setTokenCookie(res, safeUser);
+
+    return res.json({
+      user: safeUser
+    });
+  } catch (err) {
+    // Handle database-related errors
+    // return res.status(400).json(err)
+    if (err.errors.length > 1) {
+      const errObj = {}
+      for (let eachError of err.errors) {
+        errObj.push(eachError.errors.message)
+      }
+    }
+    const result = {message: err.message, errors: errObj[0].message}
+    return res.status(400).json(result)
+  }
+});
 
 module.exports = router;
