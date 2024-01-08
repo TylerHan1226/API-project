@@ -63,16 +63,8 @@ router.post('/', validateSignup, async (req, res) => {
       user: safeUser
     });
   } catch (err) {
-    // Handle database-related errors
-    // return res.status(400).json(err)
-    if (err.errors.length > 1) {
-      const errObj = {}
-      for (let eachError of err.errors) {
-        errObj.push(eachError.errors.message)
-      }
-    }
-    const result = {message: err.message, errors: err[0].message}
-    return res.status(400).json(result)
+
+    return res.status(400).json(err)
   }
 });
 
