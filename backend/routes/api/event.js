@@ -16,29 +16,25 @@ router.use((req, res, next) => {
 
 //Get all Events
 router.get('/events', requireAuth, async (req, res) => {
-    if (req.query) {
+
         let { page, size, name, type, startDate } = req.query;
         const errorObj = {}
-
+    
         page = parseInt(page)
         size = parseInt(size)
-
+    
         const currentTime = new Date().getTime();
-        if (!page || page < 1) errorObj.page = "Page must be greater than or equal to 1"
-        if (!size || size < 1) errorObj.size = "Size must be greater than or equal to 1"
-        if (name) {
-            if (typeof name !== 'string') errorObj.name = "Name must be a string"
-        }
-        // return res.json(!type)    
-        if (type) {
-            if (type !== 'Online' && type !== 'In person') errorObj.type = "Type must be 'Online' or 'In Person'"
-        }
+        if (page < 1) errorObj.page = "Page must be greater than or equal to 1"
+        if (size < 1) errorObj.size = "Size must be greater than or equal to 1"
+        if (name && typeof name !== 'string') errorObj.name = "Name must be a string"
+        if (type && (type !== 'Online' && type !== 'In person')) errorObj.type = "Type must be 'Online' or 'In Person'"
         if (startDate) {
             const startDateObj = new Date(startDate);
-            if (startDate && startDateObj < currentTime) errorObj.startDate = "Start date must be a valid date time"
+            if (isNaN(startDateObj.getTime()) || startDateObj < currentTime) {
+                errorObj.startDate = "Start date must be a valid date time";
+            }
         }
-        
-
+    
         if (Object.keys(errorObj).length) {
             const validationError = {
                 message: "Bad Request",
@@ -46,159 +42,169 @@ router.get('/events', requireAuth, async (req, res) => {
                 status: 400,
                 stack: null
             };
-            return res.status(400).json(validationError)
+            return res.status(400).json(validationError);
+        }
+      
+        const queryObj = {
+            where: {}
+        };
+        // return res.json(limit)
+        if (name) {
+            queryObj.where.name = {
+                [Op.substring]: name
+            };
         }
     
-
-    const pagination = {}
-    pagination.limit = size
-    pagination.offset = size * (page -1)
-
-    const queryObj = {
-        where: {}
-    }
-    if (name) {
-        queryObj.where.name = {
-            [Op.substring]: name
+        if (type) {
+            queryObj.where.type = {
+                [Op.substring]: type
+            };
         }
-    }
-    if (type) {
-        queryObj.where.type = {
-            [Op.substring]: type
+    
+        if (startDate) {
+            queryObj.where.startDate = {
+                [Op.substring]: startDate
+            };
         }
-    }
-    if (startDate) {
-        queryObj.where.type = {
-            [Op.substring]: startDate
+
+        let pagination = {}
+        if (size) {
+            pagination.limit = size;
         }
-    }
+        if (page) {
+            pagination.offset = size * (page - 1);
+        }
+        
+        
+        const events = await Event.findAll({
+            attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate'],
+            ...pagination
+        })
+        
+        const eventIds = await Event.findAll({
+            attributes: ['id']
+        })
+        const eventIdsArr = eventIds.map(element => element.id);
+        // => [1, 2, 3, 4, 5]
 
-    const events = await Event.findAll({
-        attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate'],
-        ...queryObj,
-        ...pagination
-    })
+        const attendances = await Attendance.findAll()
+        const numAttending = [];
+        for (const eachId of eventIdsArr) {
+            const attArr = attendances.filter(ele => ele.eventId === eachId);
+            numAttending.push(attArr.length);
+        }
+        // => [3, 5, 3, 4, 3]
 
-    const eventIds = await Event.findAll({
-        attributes: ['id']
-    })
-    const eventIdsArr = eventIds.map(element => element.id);
-    // => [1, 2, 3, 4, 5]
+        const eventImages = await EventImage.findAll({
+            where: { eventId: eventIdsArr, preview: true },
+            attributes: ["url"]
+        })
+        //=> [{url: }, {url: }, ...]
 
-    const attendances = await Attendance.findAll()
-    const numAttending = [];
-    for (const eachId of eventIdsArr) {
-        const attArr = attendances.filter(ele => ele.eventId === eachId);
-        numAttending.push(attArr.length);
-    }
-    // => [3, 5, 3, 4, 3]
+        const groups = await Group.findAll({
+            attributes: ['id', 'name', 'city', 'state']
+        })
 
-    const eventImages = await EventImage.findAll({
-        where: { eventId: eventIdsArr, preview: true },
-        attributes: ["url"]
-    })
-    //=> [{url: }, {url: }, ...]
+        let resultEvents = events
+            .filter(event => eventIdsArr.includes(event.id))
+            .map((eachEvent, eventIndex) => ({
+                id: eachEvent.id,
+                groupId: eachEvent.groupId,
+                venueId: eachEvent.venueId,
+                name: eachEvent.name,
+                type: eachEvent.type,
+                startDate: eachEvent.startDate,
+                endDate: eachEvent.endDate,
+                numAttending: numAttending[eventIndex],
+                previewImage: eventImages[eventIndex].url
+            }))
 
-    const groups = await Group.findAll({
-        attributes: ['id', 'name', 'city', 'state']
-    })
-
-    let resultEvents = events
-    .filter(event => eventIdsArr.includes(event.id))
-    .map((eachEvent, eventIndex) => ({
-        id: eachEvent.id,
-        groupId: eachEvent.groupId,
-        venueId: eachEvent.venueId,
-        name: eachEvent.name,
-        type: eachEvent.type,
-        startDate: eachEvent.startDate,
-        endDate: eachEvent.endDate,
-        numAttending: numAttending[eventIndex],
-        previewImage: eventImages[eventIndex].url
-    }))
-
-    for (let eachGroup of groups) {
-        for (let eachResultEvent of resultEvents) {
-            if (eachGroup.id == eachResultEvent.id) {
-                eachResultEvent.Group = eachGroup
+        for (let eachGroup of groups) {
+            for (let eachResultEvent of resultEvents) {
+                if (eachGroup.id == eachResultEvent.id) {
+                    eachResultEvent.Group = eachGroup
+                }
             }
         }
-    }
-    const venues = await Venue.findAll({
-        attributes: ['id', 'city', 'state']
-    })
-    for (let eachVenue of venues) {
-        for (let eachResultEvent of resultEvents) {
-            if (eachVenue.id == eachResultEvent.id) {
-                eachResultEvent.Venue = eachVenue
+        const venues = await Venue.findAll({
+            attributes: ['id', 'city', 'state']
+        })
+        for (let eachVenue of venues) {
+            for (let eachResultEvent of resultEvents) {
+                if (eachVenue.id == eachResultEvent.id) {
+                    eachResultEvent.Venue = eachVenue
+                }
             }
         }
-    }
-    return res.status(200).json({ 'Events': resultEvents })
-}
-    const events = await Event.findAll({
-        attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate']
-    })
+        return res.status(200).json({ 'Events': resultEvents })
+    })  
+    // const limit = 20
+    // const offset = 10
+    // const events = await Event.findAll({
+    //     attributes: ['id', 'venueId', 'groupId', 'name', 'type', 'startDate', 'endDate'],
+    //     limit,
+    //     offset
+    // })
 
-    const eventIds = await Event.findAll({
-        attributes: ['id']
-    })
-    const eventIdsArr = eventIds.map(element => element.id);
-    // => [1, 2, 3, 4, 5]
+    // const eventIds = await Event.findAll({
+    //     attributes: ['id']
+    // })
+    // const eventIdsArr = eventIds.map(element => element.id);
+    // // => [1, 2, 3, 4, 5]
 
-    const attendances = await Attendance.findAll()
-    const numAttending = [];
-    for (const eachId of eventIdsArr) {
-        const attArr = attendances.filter(ele => ele.eventId === eachId);
-        numAttending.push(attArr.length);
-    }
-    // => [3, 5, 3, 4, 3]
+    // const attendances = await Attendance.findAll()
+    // const numAttending = [];
+    // for (const eachId of eventIdsArr) {
+    //     const attArr = attendances.filter(ele => ele.eventId === eachId);
+    //     numAttending.push(attArr.length);
+    // }
+    // // => [3, 5, 3, 4, 3]
 
-    const eventImages = await EventImage.findAll({
-        where: { eventId: eventIdsArr, preview: true },
-        attributes: ["url"]
-    })
-    //=> [{url: }, {url: }, ...]
+    // const eventImages = await EventImage.findAll({
+    //     where: { eventId: eventIdsArr, preview: true },
+    //     attributes: ["url"]
+    // })
+    // //=> [{url: }, {url: }, ...]
 
-    const groups = await Group.findAll({
-        attributes: ['id', 'name', 'city', 'state']
-    })
+    // const groups = await Group.findAll({
+    //     attributes: ['id', 'name', 'city', 'state']
+    // })
 
-    let resultEvents = events
-    .filter(event => eventIdsArr.includes(event.id))
-    .map((eachEvent, eventIndex) => ({
-        id: eachEvent.id,
-        groupId: eachEvent.groupId,
-        venueId: eachEvent.venueId,
-        name: eachEvent.name,
-        type: eachEvent.type,
-        startDate: eachEvent.startDate,
-        endDate: eachEvent.endDate,
-        numAttending: numAttending[eventIndex],
-        previewImage: eventImages[eventIndex].url
-    }))
+    // let resultEvents = events
+    //     .filter(event => eventIdsArr.includes(event.id))
+    //     .map((eachEvent, eventIndex) => ({
+    //         id: eachEvent.id,
+    //         groupId: eachEvent.groupId,
+    //         venueId: eachEvent.venueId,
+    //         name: eachEvent.name,
+    //         type: eachEvent.type,
+    //         startDate: eachEvent.startDate,
+    //         endDate: eachEvent.endDate,
+    //         numAttending: numAttending[eventIndex],
+    //         previewImage: eventImages[eventIndex].url
+    //     }))
 
-    for (let eachGroup of groups) {
-        for (let eachResultEvent of resultEvents) {
-            if (eachGroup.id == eachResultEvent.id) {
-                eachResultEvent.Group = eachGroup
-            }
-        }
-    }
+    // for (let eachGroup of groups) {
+    //     for (let eachResultEvent of resultEvents) {
+    //         if (eachGroup.id == eachResultEvent.id) {
+    //             eachResultEvent.Group = eachGroup
+    //         }
+    //     }
+    // }
 
-    const venues = await Venue.findAll({
-        attributes: ['id', 'city', 'state']
-    })
-    for (let eachVenue of venues) {
-        for (let eachResultEvent of resultEvents) {
-            if (eachVenue.id == eachResultEvent.id) {
-                eachResultEvent.Venue = eachVenue
-            }
-        }
-    }
+    // const venues = await Venue.findAll({
+    //     attributes: ['id', 'city', 'state']
+    // })
+    // for (let eachVenue of venues) {
+    //     for (let eachResultEvent of resultEvents) {
+    //         if (eachVenue.id == eachResultEvent.id) {
+    //             eachResultEvent.Venue = eachVenue
+    //         }
+    //     }
+    // }
 
-    return res.status(200).json({ 'Events': resultEvents })
-})
+    // return res.status(200).json({ 'Events': resultEvents })
+
 
 
 //Get all Events of a Group specified by its id
@@ -322,7 +328,7 @@ router.get('/events/:eventId', requireAuth, async (req, res) => {
 
 
     const memberships = await Membership.findAll({
-        where: {groupId: events.groupId}
+        where: { groupId: events.groupId }
     })
     const numMembers = memberships.length
 
@@ -362,7 +368,7 @@ router.post('/groups/:groupId/events', requireAuth, async (req, res) => {
     if (!type || !['Online', 'In person'].includes(type)) {
         validationErrorsObj.type = 'Type must be Online or In person';
     }
-    if (!capacity|| !Number.isInteger(capacity)) {
+    if (!capacity || !Number.isInteger(capacity)) {
         validationErrorsObj.capacity = 'Capacity must be an integer';
     }
     if (!price || !typeof price === 'number' || price < 0) {
@@ -505,7 +511,7 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
     const attendeesIdArr = attendances.map(ele => ele.userId)
     //  => [1, 4, 6]
     const membership = await Membership.findOne({
-        where: {userId: user.id, status: ['host', 'co-host']}
+        where: { userId: user.id, status: ['host', 'co-host'] }
     })
 
     if (!membership) {
@@ -538,7 +544,7 @@ router.post('/events/:eventId/images', requireAuth, async (req, res) => {
     return res.status(403).json({
         "message": "Not Authorized"
     })
- 
+
 })
 
 
@@ -685,17 +691,17 @@ router.delete('/events/:eventId', requireAuth, async (req, res) => {
             message: "Event couldn't be found"
         })
     }
-    
+
 
     // Authorization
     const { user } = req
     const groupId = event.groupId
     const group = await Group.findByPk(groupId)
-    if (group.organizerId  == user.id) {
+    if (group.organizerId == user.id) {
         await event.destroy()
         return res.status(200).json({
-        "message": "Successfully deleted"
-    })
+            "message": "Successfully deleted"
+        })
     }
     const memberships = await Membership.findAll({
         where: { groupId: groupId }
